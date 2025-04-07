@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 import plotly.express as px
+from itertools import accumulate
 
 
 # read data in df
@@ -16,21 +17,21 @@ def select_data(filter_on, df, col_n):
 
 # make the total amount of changes fig
 def total_amount_fig(df):
-    selected_df = select_data(st.session_state.type_file_total_fig, df, col_n="file_name")
+    selected_df = select_data(st.session_state.linac_total_fig, df , col_n="linac")
+    selected_df = select_data(st.session_state.type_file_total_fig, selected_df, col_n="file_name")
 
     changes_per_file = make_changes_per_file(selected_df)
     plotting_per_file = make_total_amount_to_plot(changes_per_file)
 
-    fig = px.line(plotting_per_file, x='Date', y='Amount', color='File name', markers=True, symbol='Linac', hover_data="First entry", title= "Total amount of differences per file per linac")
+    fig = px.line(plotting_per_file, x='Date', y='Amount', color='File name', markers=True, hover_data="First entry", title= "Total amount of differences per file per linac")
     
     return fig
 
-@st.cache_data #??? not sure, want wordt meeerdere malen aangeroepen
+@st.cache_data 
 def make_total_amount_to_plot(changes_per_file):
     #get the sum of the amount of changes
     plotting_per_file = pd.DataFrame()
     for file_name, df_changes in changes_per_file.items():
-        for linac in set(df_changes["linac"]):
             # get how many times there was a diffence between col
             date_columns = df_changes.columns.difference(['date', 'linac', 'file_name', 'item', 'part', df_changes.columns[-1]])
             plotting = list((df_changes[date_columns] != 0).sum()[:-1]) 
@@ -41,7 +42,6 @@ def make_total_amount_to_plot(changes_per_file):
             data = {
                 "Amount": plotting,
                 "Date": list(date_columns[:-1]),
-                "Linac": [linac] * len(plotting),
                 "File name": [file_name] * len(plotting),
                 "First entry": [first_date] * len(plotting)
             }
@@ -49,7 +49,7 @@ def make_total_amount_to_plot(changes_per_file):
             plotting_per_file = pd.concat([plotting_per_file, plotting_per])
     return plotting_per_file
 
-@st.cache_data #??? not sure, want wordt meeerdere malen aangeroepen
+@st.cache_data 
 def make_changes_per_file(df):
     # change df
     df_pivot = df.pivot(index=["linac", "file_name", "item", "part"], columns="date", values="value")
@@ -76,8 +76,8 @@ def make_changes_per_file(df):
 
     return changes_per_file
 
-## to make the bulk of the data smaller
-@st.cache_data #??? not sure, want wordt meeerdere malen aangeroepen
+# to make the bulk of the data smaller
+@st.cache_data 
 def select_linac(df):
     return select_data(st.session_state.linac_linac_compare_df1, df, col_n="linac")
 
@@ -97,6 +97,7 @@ def make_compare_df(df):
     #to remove the item & part if has 0 difference
     if st.session_state.none_changes_compare_linacs == False:
         changes_per_file = {filename: df_changes[(df_changes.iloc[:,4:-1] != 0).any(axis=1)] for filename, df_changes in changes_per_file.items()}
+    
     #make it to a df to show
     total_df = pd.DataFrame()
     for filename, df_changes in changes_per_file.items():
@@ -118,41 +119,64 @@ def make_compare_df(df):
     
     return total_df
 
-@st.cache_data #??? not sure, want wordt meeerdere malen aangeroepen
-def select_file_name(df):
-        return select_data(st.session_state.file_type_diff_plot, df, "file_name")
+# to make the bulk of the data smaller
+@st.cache_data 
+def select_file_name(df, filter):
+        return select_data(filter, df, "file_name")
 
 
 def make_diff_plot_comparedf(df):
-    newdf = select_file_name(df) 
+    newdf = select_file_name(df, st.session_state.file_type_diff_plot) 
+
+    # make the differences per file
     changes_per_file = make_changes_per_file(newdf)
 
+    #make the df to show
     total_df = pd.DataFrame()
     ips = st.session_state.i_and_p
     for filename, df_changes in changes_per_file.items():
         if df_changes.columns[-2] != "part":
-            #add of the item
+            #add of the item en part
             df_changes["Item & part"] = "I:"+ df_changes["item"].astype(str) + " P:"+ df_changes["part"].astype(str)
+
             dates = list(df_changes.columns)[4:-2]
+            dates.append(re.findall(r"\d{4}-\d{2}-\d{2}", df_changes.columns[-2])[0])
+            dates = sorted(dates)
+
+
             for ip in ips:
                 ip_df = df_changes[df_changes["Item & part"] == ip]
+
+                #make the amount values again from the differences
+                first_entry = ip_df.iloc[:,-2].values[0]
+                difference = ip_df[dates[1:]].values[0]
+                total_list = list(accumulate([first_entry] + difference.tolist()))
 
                 data = {
                         "Linac": [df_changes["linac"][1]] * len(dates),
                         "Item & part": [ip] * len(dates),
                         "date": dates,
-                        "Difference": ip_df[dates].values[0],
-                        "First entry": ip_df.iloc[:,-2].values[0]
+                        "Value": total_list
                     }
                 
                 temp_df = pd.DataFrame(data) 
                 total_df = pd.concat([total_df, temp_df])
-    fig = px.line(total_df, x='date', y='Difference', color='Item & part', markers=True, symbol='Linac', hover_data="First entry", title= "Differences per Item & part per linac over the time")
+    fig = px.line(total_df, x='date', y='Value', color='Item & part', markers=True, symbol='Linac', title= "The value per Item & part per linac over the time")
     return fig
 
-def add_compare_linac(layout):
-    return
+# def make_compare_linacs_layout():
+#     loops = st.session_state["compare_linacs"]
 
+#     for i in list(range(loops)):
+
+
+#     return
+
+# def add_compare_linac():
+#     if "compare_linacs" not in st.session_state:
+#         st.session_state["compare_linacs"] = 0
+#     else:
+#         st.session_state["compare_linacs"] += 1
 
 
 df_db = getdata("data/cal_changed.csv")
@@ -163,18 +187,20 @@ layout.title("Linac logfiles comparing")
 
 amount_plot = st.container(border= True)
 amount_plot.selectbox(label="The type of file you want to see", options=["Be52", "Be63", "Optics", "Mlc"], key="type_file_total_fig")
+amount_plot.selectbox(label="The Linac you want to see", options=sorted(list(set(df_db["linac"]))), key="linac_total_fig")
 amount_plot.plotly_chart(total_amount_fig(df_db))
 
 compare_linacs = st.container(border=True)
 cl1, cl2, cl3 = compare_linacs.columns(3)
 cl1.checkbox("See the Part & items that had no changes", key="none_changes_compare_linacs")
+# compare_linacs.button(icon = ":material/add:", help= "add",label="", on_click=add_compare_linac)
+
 multiple1, multiple2 = compare_linacs.columns(2)
 compare_linac = multiple1.container()
 compare_linac.selectbox(label="The Linac you want to see", options=sorted(list(set(df_db["linac"]))), key="linac_linac_compare_df1")
 cl2.selectbox(label="The date you want to compare to", options=sorted(list(set(df_db[df_db["linac"] == st.session_state.linac_linac_compare_df1]["date"]))), key="old_date_linac_compare_df1")
 cl3.selectbox(label="The date you want to see the difference of", options=sorted(list(set(df_db[df_db["linac"] == st.session_state.linac_linac_compare_df1]["date"])))[1:], key="new_date_linac_compare_df1")
 compare_df = compare_linac.data_editor(make_compare_df(df_db), key="linac_compare_df")
-# multiple2.button(icon = ":material/add:", help= "add",label="", on_click=add_compare_linac, args=compare_linacs)
 compare_linac2 = multiple2.container()
 compare_linac2.selectbox(label="The Linac you want to see", options=sorted(list(set(df_db["linac"]))), key="linac_linac_compare_df2")
 compare_df2 = compare_linac2.data_editor(make_compare_df(df_db), key="linac_compare_df2")
@@ -182,11 +208,11 @@ compare_df2 = compare_linac2.data_editor(make_compare_df(df_db), key="linac_comp
 
 diff_plot = st.container(border=True)
 btn1, btn2 = diff_plot.columns(2)
-btn1.selectbox(label='File type', options=["Be5201"], key="file_type_diff_plot")
+btn1.selectbox(label='File type', options=set(compare_df["File name"]), key="file_type_diff_plot")
 btn2options = list(compare_df[compare_df["File name"] == st.session_state.file_type_diff_plot]["Item & part"].values)
 try:
     btn2.multiselect(label="Part & item combination", options=btn2options, default=btn2options[0], key="i_and_p")
     diff_plot.plotly_chart(make_diff_plot_comparedf(df_db))
-except IndexError:
-    diff_plot.write("Select the dates in the table above that the file is twice present")
+except Exception as e:
+    diff_plot.write("Select the dates in the table above that the file is twice present and then choose a Part & item you want to see")
 
