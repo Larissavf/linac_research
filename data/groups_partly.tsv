@@ -1,0 +1,49 @@
+groep	item	part
+dosismetry system pressure/temp	559	45
+dosismetry system pressure/temp	558	45
+dosismetry channel1	484	45
+dosismetry channel1	314	45
+dosismetry channel1	314	1
+dosismetry channel1	44	141
+dossismetry channel2	315	45
+dossismetry channel2	315	1
+dossismetry channel2	45	45
+mag fill psu control system	381	1
+mag fill psu control system	327	45
+mag fill psu control system	244	45
+magnetron tuning system	233	45
+magnetron tuning system / phase error detector	232	45
+phase error detector	230	1
+mag fill psu control system	216	45
+mag fill psu control system	212	45
+mag fill psu control system	191	45
+mag fill psu control system	190	45
+mag fill psu control system	187	1
+phase error detector	163	1
+phase error detector	163	45
+phase error detector	161	45
+phase error detector	129	45
+magnetron tuning system	97	1
+beam centering system	332	1
+beam centering system	310	1
+beam centering system	195	45
+beam centering system	194	45
+beam centering system	193	45
+beam centering system	192	45
+beam centering system	165	45
+beam centering system	165	1
+beam centering system	164	45
+beam centering system	164	1
+beam centering system	128	45
+beam centering system	127	45
+beam focus system	308	1
+beam bending system	305	1
+beam bending system	304	1
+temprature monitoring system	226	45
+temprature monitoring system	224	45
+radiation head	85	45
+radiation head	80	45
+radiation head	75	45
+gantry rotation system	70	45
+gantry rotation system	44	45
+gantry rotation system	44	134

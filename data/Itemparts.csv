@@ -1,0 +1,199 @@
+﻿All Items,Part No.,Part Name,Description
+All Items,1,Setting value,This part contains the requested or required value.
+All Items,2,Tolerance high,This part sets the high limit of the value in part 1.
+All Items,3,Exception code,This part contains the exception code. For information on Exception codes see Chapter Appendix A.
+All Items,4,Actual value,This part is the read back part in calibrated units. The value of part 4 is obtained by multiplying the valid value by the calibration gain divided by 2048. Thus:
+,,,part 4 = part 110 × (part 11/2048)
+All Items,5,Change queue,This part defines default change queue.
+All Items,6,Tolerance low,This part sets the low limit of the value in part 1.
+All Items,10,Calibration offset,This part is the offset value that is applied to part 111 during calibration.
+All Items,11,Calibration gain,This part is the gain value that is applied to part 110 during calibration.
+All Items,12,Calibration inverse,This part is the inverse gain value that is applied to limits to obtain raw limits.
+All Items,13,Access pointer,This part is the index to all fac 1 arrays and can be used together with the control pointer access to gain access to any variable in the system.
+All Items,14,Access mask,This part is used to distinguish between incoming raw analog and digital data.
+,,,A value of -1 denotes analog data.
+,,,A value between 0 and 65535 denotes digital data.
+All Items,15,Action mask,This part determines the action to be taken when a limit is violated. Table 2.30 shows the permitted values of part 15
+All Items,16,Parent interlock,This part defines hierarchy of interlocks. If the item in this part is also an inhibit then this item will not be displayed.
+All Items,17,Default frequency,This part defines default frequency queue.
+All Items,18,Item type,This part defines how an item is treated.
+,,,"The lower 5 bits define 32 different item types being subdivisions of transmit items, receive items and process items to select the type of processing required per item."
+,,,The upper 11 bits define a number of attributes per item. 
+All Items,19,Calibration limit high,This part is the calibrated upper limit.
+All Items,20,Calibration limit low,This part is the calibrated lower limit.
+All Items,21,Actual start,This part sets the geometrical value.
+All Items,22,Actual stop,This part is the calculated stop value.
+All Items,23,Actual restart,This part sets the geometrical value of actual restart.
+All Items,24,Final value,This part sets the final geometrical value.
+All Items,25,Required stop,This part is the required stop part. 
+All Items,26,Maximum output,This part sets the final geometrical value.
+All Items,27,Maximum input,This part sets the final geometrical value.
+All Items,28,Confirmed value,This part is the confirmed value part.
+All Items,38,Coupled item,This part enables control of a particular item from a separate item enabling access to item that are not directly accessible.
+All Items,45,Confirmed value,zelfde mogelijk als part 4?
+All Items,39,Coupled part,This part enables control of a particular part from a separate item enabling access to parts that are not directly accessible.
+All Items,101,F1 item type,This part enables reduction of the Item type for use by Facility 1:
+,,,0 = Rx Integer
+,,,1 = Tx Integer
+,,,2 = Rx Boolean
+,,,3 = Tx Boolean
+,,,4 = Process types. 
+All Items,102,F1 count,"Count of the number of times this channel has been transmitted (Tx), received (Rx) or processed."
+All Items,103,Physical address,This part is the physical address of an item. It comprises of three elements that can be decoded from the value of the item:
+,,,RTU address from 0 to 5 (part 104)
+,,,Device address from 0 to 127
+,,,Read\write bit 0 or 1.
+All Items,104,RTU address,"This part is the address of the RTU to which the associated item points. It is part of the physical address. Only receive and transmit items have a direct connection to the hardware, but process items show an RTU address of 0 (ICCA-A) which is not true."
+All Items,105,Device address,"This part is the device address, indicating the PCB and channel with which the item is communicating"
+All Items,106,Read/Write address,This is the read/write address.
+,,,Read = 1
+,,,Write = 0.
+All Items,110,Valid value,This part is the raw value that is added to the offset part. The value of part 110 is calculated by adding the calibration offset value part 10 to the raw data part 111.
+All Items,111,Raw data,"This part is the raw data read from an AI12 PCB or a DIE PCB. The raw data can be a 12-bit digital representation of an analog value from an AI12 PCB, or a binary value that is 1 bit of a 16-bit word from a DIE PCB. The value of part 111 is not the true value of the source data, due to 0 volt differences."
+,,,The value of part 14 distinguishes between incoming analog or digital data.
+All Items,112,Required setting,"This part is the required setting part, initially derived from part 1 × part 12 (inverse gain). For process items and stand-alone transmit items, part 112 is used as a set value. For servo process items, the value may be adjusted automatically by feedback when the servo is enabled."
+All Items,114,Change raw value,"This part is the accumulated error from the output of the servo process item. The part is used mainly in transmit items as the new set value, to correct any error in the corresponding transmit item."
+All Items,120,Limit enable,When set enables Facility 1 log faults due to limit errors.
+All Items,121,High limit binary,"This part is uncalibrated units derived from part 19. Part 121 has the same function as part 19, but with different units. Thus:"
+,,,part 121 = part 19 × (part 12/2048) + part 10
+All Items,122,Low limit binary,"This part is the uncalibrated units derived from part 20. Part 122 has the same function as part 20, but with different units. Thus:"
+,,,part 122 = part 20 × (part 12/2048) + part 10
+All Items,123,Absolute high limit,This part is the upper design limit. The part functions in the same way as part 121 but cannot be adjusted.
+All Items,124,Absolute low limit,This part is the lower design limit. The part functions in the same way as part 122 but cannot be adjusted.
+All Items,125,Max output,Clamps maximum value of Tx items.
+All Items,126,Min output,Clamps minimum value of Tx items
+All Items,127,Limit fault,Set to True (i255) if Limit fault is set otherwise false.
+All Items,130,Process/filter identification,"This part is the process identification part: for example, the filter type for receive items."
+,,,"For items that display the value -32767 when HT is Off, the real value can be displayed by setting the value of part 130 to 10."
+All Items,131,Parameter 1 function,"The function of part 131 varies, depending on the item in which it is contained. "
+All Items,,movement start items,part 131 is the gain value of the check potentiometer.
+All Items,132,Parameter 2 function,"The function of part 132 varies, depending on the item in which it is contained"
+,,,"For example, in movement start items, part 132 is the offset value of the check potentiometer."
+All Items,133,Parameter 3 function,"The function of part 133 varies, depending on the item in which it is contained."
+Check potentiometer items,133,Parameter 3 function,The amount by which the value of the check
+,,,potentiometer can vary from that of the coarse potentiometer without an error.
+Steering servo items 2R and 2T,133,Parameter 3 function,A pointer to the lookup table that the item is using. Thus:
+,,,2R low = 0
+,,,2T low =1
+,,,2R high = 2
+,,,2T high = 3
+,,,2R mid = 4
+,,,2T mid =5
+All Items,134,Parameter 4 function,"The function of part 134 varies, depending on the item in which it is contained."
+Demand items,134,Parameter 4 function,Contains the quadratic gain.
+Light field item,134,Parameter 4 function,The time delay before the light is switched Off.
+Movement control items,134,Parameter 4 function,The raw value of the maximum permitted unexpected movement.
+Magnet systems,134,Parameter 4 function,Change threshold should be 1.
+All Items,135,Parameter 5 function,"The function of part 135 varies, depending on the item in which it is contained."
+Demand items,135,Parameter 5 function,Contains the linear gain.
+Magnetron tuner servo,135,Parameter 5 function,The change threshold used to set the value of integrated composite phase error that must accumulate before the magnetron attempts to correct
+Magnet systems,135,Parameter 5 function,Overshoot should be 1000
+All Items,136,Parameter 6 function,"The function of part 136 varies, depending on the item in which it is contained."
+Steering servo items 2R and 2T,136,Parameter 6 function,"The adjustment to the set value at a given gantry angle, as specified in the lookup table"
+All Items,137,Process param 7,This is the part that is available for parameter of process item which is saveable in the digital
+,,,accelerator database save.
+All Items,138,Process param 8,This is the part that is available for parameter of process item which is saveable in the digital
+,,,accelerator database save.
+All Items,139,Process param 9,This is the part that is available for parameter of process item which is saveable in the digital
+,,,accelerator database save.
+All Items,140,Deadband,
+Motor systems,140,Deadband,Set to prevent oscillation.
+Demand items,140,Deadband,Sets the dead region of the potentiometer
+All Items,141,Gain 1,"The function of p141 varies, depending on the item in which it is contained."
+Motor systems,141,Gain 1,The positional loop gain value
+Movement start items,141,Gain 1,The coarse potentiometer gain
+All Items,142,Gain 2,"The function of part 142 varies, depending on the item in which it is contained."
+Process items,142,Gain 2,"The output or loop gain (for example, calibration of beam error values, phase gain of magnetron tuner system)."
+Movement start items,142,Gain 2,The fine potentiometer gain
+All Items,143,Coarse potentiometer offset,"For movement start items, part 143 is the offset value for the coarse potentiometer."
+All Items,144,Fine potentiometer offset,"For movement start items, part 144 is the offset value for the fine potentiometer."
+All Items,151,Register part,"The function of part 151 varies, depending on the item in which it is contained."
+All Items,152,Register part,"The function of part 152 varies, depending on the item in which it is contained."
+,,,"For example, in i44, part 152 shows the segment dose in 1/64 of an MU: for example, 6400 for 100 MU, and the value of part 152 decrements as the dose is delivered."
+All Items,153,Register part,"The function of part 153 varies, depending on the item in which it is contained."
+,,,"For example, in control area power supply items part 153 records the address of the last RTU to violate a limit."
+All Items,154,Register part,"The function of part 154 varies, depending on the item in which it is contained."
+All Items,155,Register part,"The function of part 155 varies, depending on the item in which it is contained."
+All Items,156,Register part,"The function of part 156 varies, depending on the item in which it is contained."
+,,,"For example, in check potentiometer items, part 156 shows the difference between the coarse and check potentiometers. If the difference is greater than the value in part 133 (normally 250), then an error is flagged."
+,,,The value of part 156 is updated when the new value exceeds the old value.
+All Items,157,Register part,"The function of part 157 varies, depending on the item in which it is contained."
+,,,"For example, in movement start items, part 157 this is the maximum fine potentiometer error."
+All Items,158,Register part,"The function of part 158 varies, depending on the item in which it is contained."
+All Items,159,Register part,"The function of part 159 varies, depending on the item in which it is contained."
+All Items,160,Register part,"In servo items, setting the value of part 160 from 2 to 0 to 3 simulates a reboot (item changes are"
+,,,implemented).
+All Items,161,Auto/Manual,This part sets the item to Auto or Manual mode where:
+,,,The value 0 = Manual mode
+,,,The value 1 = Auto mode.
+All Items,162,Learn enable,This part is used in three-potentiometer and beam uniformity items to set the item to Learn mode
+,,,where:
+,,,Value 0 = Learn mode Off
+,,,Value 1 = Learn mode On.
+All Items,171,Source item 1,This item is used by and controlled by the process block and filter as appropriate.
+All Items,172,Source item 2,This item is used by and controlled by the process block and filter as appropriate.
+All Items,173,Source item 3,This item is used by and controlled by the process block and filter as appropriate.
+All Items,174,Source item 4,This item is used by and controlled by the process block and filter as appropriate.
+All Items,175,Output item 1,This item is used by and controlled by the process block and filter as appropriate.
+All Items,176,Output item 2,This item is used by and controlled by the process block and filter as appropriate.
+All Items,177,Output item 3,This item is used by and controlled by the process block and filter as appropriate.
+All Items,178,Output item 4,This item is used by and controlled by the process block and filter as appropriate.
+All Items,180,Queue type,The queue or list in which Facility 1 is processing. i255 indicates not in a queue.
+All Items,181,Queue pointer,This part is the queue pointer part.
+All Items,182,Fast queue depth,This part is the fast queue depth part.
+All Items,183,Slow queue depth,This part is the slow queue depth part.
+All Items,184,Fast servo queue depth,This part is the fast servo queue depth part.
+All Items,185,Slow servo queue depth,This part is the slow servo queue depth part.
+All Items,186,Process_Param_10_Part ,"The function of part 186 varies, depending on the item in which it is contained."
+All Items,187,Process_Param_11_Part ,"The function of part 187 varies, depending on the item in which it is contained."
+All Items,188,Process_Param_12_Part ,"The function of part 188 varies, depending on the item in which it is contained."
+All Items,189,Process_Param_13_Part ,"The function of part 189 varies, depending on the item in which it is contained."
+All Items,190,Process_Param_14_Part ,"The function of part 190 varies, depending on the item in which it is contained."
+All Items,191,Process_Param_15_Part ,"The function of part 191 varies, depending on the item in which it is contained."
+All Items,192,Process_Param_16_Part ,"The function of part 192 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 192 shows Minimum permitted number of segments needed for a valid lookup table."
+All Items,193,Process_Param_17_Part ,"The function of part 193 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 193 shows Maximum permitted limit for absolute value in the lookup table."
+All Items,194,Process_Param_18_Part ,"The function of part 194 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 194 shows Maximum permitted limit for mean value of the lookup table."
+All Items,195,Process_Param_19_Part ,"The function of part 195 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 195 shows Maximum permitted limit for mean of absolute values in the lookup table."
+All Items,196,Process_Param_20_Part ,"The function of part 196 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 196 controls Tolerance range constraint."
+All Items,197,Process_Param_21_Part ,"The function of part 197 varies, depending on the item in which it is contained."
+All Items,198,Process_Param_22_Part ,"The function of part 198 varies, depending on the item in which it is contained."
+All Items,199,Process_Param_23_Part ,"The function of part 199 varies, depending on the item in which it is contained."
+All Items,200,Process_Param_24_Part ,"The function of part 200 varies, depending on the item in which it is contained."
+All Items,201,Process_Param_25_Part ,"The function of part 201 varies, depending on the item in which it is contained."
+All Items,202,Process_Param_26_Part ,"The function of part 202 varies, depending on the item in which it is contained."
+All Items,203,Process_Param_27_Part ,"The function of part 203 varies, depending on the item in which it is contained."
+All Items,204,Process_Param_28_Part ,"The function of part 204 varies, depending on the item in which it is contained."
+All Items,205,Process_Param_29_Part ,"The function of part 205 varies, depending on the item in which it is contained."
+All Items,206,Process_Param_30_Part ,"The function of part 206 varies, depending on the item in which it is contained."
+All Items,207,Register_10_Part      ,"The function of part 207 varies, depending on the item in which it is contained."
+All Items,208,Register_11_Part      ,"The function of part 208 varies, depending on the item in which it is contained."
+All Items,209,Register_12_Part      ,"The function of part 209 varies, depending on the item in which it is contained."
+All Items,210,Register_13_Part      ,"The function of part 210 varies, depending on the item in which it is contained."
+All Items,211,Register_14_Part      ,"The function of part 211 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 211 shows  Current Backup_Error."
+All Items,212,Register_15_Part      ,"The function of part 212 varies, depending on the item in which it is contained."
+All Items,213,Register_16_Part      ,"The function of part 213 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 213 Current Correlated_Backup_Error."
+All Items,214,Register_17_Part      ,"The function of part 214 varies, depending on the item in which it is contained."
+All Items,215,Register_18_Part      ,"The function of part 215 varies, depending on the item in which it is contained."
+All Items,216,Register_19_Part      ,"The function of part 216 varies, depending on the item in which it is contained."
+All Items,217,Register_20_Part      ,"The function of part 217 varies, depending on the item in which it is contained."
+All Items,218,Register_21_Part      ,"The function of part 218 varies, depending on the item in which it is contained."
+All Items,219,Register_22_Part      ,"The function of part 219 varies, depending on the item in which it is contained."
+All Items,220,Register_23_Part      ,"The function of part 220 varies, depending on the item in which it is contained."
+All Items,221,Register_24_Part      ,"The function of part 221 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 221 shows Current Error_In_Fine."
+All Items,222,Register_25_Part      ,"The function of part 222 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 222 shows Current Error_In_Fine lookup table value."
+All Items,223,Register_26_Part      ,"The function of part 223 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 223 shows Current Backup_Error lookup table value."
+All Items,224,Register_27_Part      ,"The function of part 224 varies, depending on the item in which it is contained."
+,,,"For example, in triple pot start items, part 224 shows Current Correlated_Backup_Error lookup table value."
+All Items,225,Register_28_Part      ,"The function of part 225 varies, depending on the item in which it is contained."
+All Items,226,Register_29_Part      ,"The function of part 226 varies, depending on the item in which it is contained."
+All Items,227,Register_30_Part      ,"The function of part 227 varies, depending on the item in which it is contained."
