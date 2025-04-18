@@ -339,6 +339,9 @@ def make_diff_plot_comparedf(df, ips, filetype):
     # make the differences per file
     changes_per_file = make_changes_per_file(newdf)
 
+    # translate ips
+    # ips = reverse_translate_part_item(ips)
+
     #make the df to show
     total_df = pd.DataFrame()
     for filename, df_changes in changes_per_file.items():
@@ -368,6 +371,8 @@ def make_diff_plot_comparedf(df, ips, filetype):
                 
                 temp_df = pd.DataFrame(data) 
                 total_df = pd.concat([total_df, temp_df])
+
+    # to check if both the items are spread more than 2000 apart
     if multiple_plot_nes(total_df):
         fig = make_mulitple_grouped_plot(total_df, split_on="Item & part", plot_on="Value")
         fig.update_layout(title_text="The value per Item & part per linac over the time", height=150*len(list(set(total_df["Item & part"]))))
@@ -418,6 +423,41 @@ def translate_values(df):
     df.loc[mask, "Resolution"] = res_split[1]
     
     return df
+
+
+def extract_item_part(text):
+    match = re.search(r'I:(\d+)\s+P:(\d+)', text)
+    if match:
+        item = int(match.group(1))
+        part = int(match.group(2))
+        return pd.Series([item, part])
+    return pd.Series([None, None])
+
+# def translate_part_item(to_translate):
+#     #get the translate table
+#     linac_items = st.session_state.linac_items
+
+#     df = pd.DataFrame({"Item & part" : to_translate})
+#     # Apply to the dataframe
+#     df[["item", "part"]] = df["Item & part"].apply(extract_item_part)
+#     #translate
+#     df = df.merge(linac_items[["Item name", "Category"]], left_on="item", right_on="Item name", how="left")
+#     # for reverse translate
+#     st.session_state["translated_item"] = df
+#     output = df["item"].astype(str) + " " + df["Category"]
+#     return output.tolist()
+
+# def reverse_translate_part_item(to_translate):
+#     comparing = st.session_state.translated_item
+#     output = []
+#     for text in to_translate:
+#         numbers = re.findall(r'\d+', text)
+#         item_part = comparing[comparing["item"] == numbers[0]]["Item & part"].tolist()
+#         output.append(item_part[0])
+
+
+
+
 
 @st.cache_data 
 def edit_db_data(df):
@@ -501,6 +541,7 @@ compare_df2 = df2.data_editor(make_compare_df(df_db), key="linac_compare_df2")
 diff_plot = st.container(border=True)
 btn1, btn2 = diff_plot.columns(2)
 btn1.selectbox(label='File type', options=set(compare_df["File name"]), key="file_type_diff_plot")
+#translate_part_item()
 btn2options = list(compare_df[compare_df["File name"] == st.session_state.file_type_diff_plot]["Item & part"].values)
 try:
     btn2.multiselect(label="Part & item combination", options=btn2options, default=btn2options[0], key="i_and_p")
