@@ -15,8 +15,24 @@ return:
     dataframe
 """
 @st.cache_data
-def get_db_data(path):
-    return pd.read_csv(path, header = None, names=["date", "linac", "file_name", "item", 'part', "value"])
+def get_db_data(headerpath, itempath, valuespath):
+    #load in the different files
+    headers = pd.read_csv(headerpath, header = None,  names=["date", "file_name", "empty", "thiing", "thing"])
+    items = pd.read_csv(itempath, header = None, names=["item", "category", "thing", "thiing"])
+    values = pd.read_csv(valuespath, header = None, names=["id", "calheaders_id", "item", "part", "value"])
+
+    #edit the df to make it usefull
+    headers.reset_index(inplace=True)
+    headers.set_index("level_0", inplace=True)
+    headers['date'] = pd.to_datetime(headers['date'], format='%d/%m/%Y')
+    headers["date"] = headers["date"].astype("str")
+    headers.columns = ["linac","date", "file_name", "empty", "thiing", "thing"]
+
+    #merge the 3 files to get all the useful information
+    tempdf = headers[["linac", "date", "file_name"]].merge(values[["calheaders_id", "item", "part", "value"]], left_on="level_0", right_on="calheaders_id", how="inner").drop(columns="calheaders_id")
+    tempdf = tempdf.merge(items[["item", "category"]], on = "item", how="inner")
+
+    return tempdf
 
 """
 read data from different translate tables in df
@@ -53,6 +69,7 @@ input:
 return:
     filterd dataframe
 """
+@st.cache_data
 def select_data(filter_on, df, col_n):
     df[col_n] = df[col_n].astype(str)
     return df[df[col_n].str.contains(fr'{str(filter_on)}', regex=True)]
@@ -92,7 +109,7 @@ def make_total_amount_to_plot(changes_per_file, see_part_45):
     plotting_per_file = pd.DataFrame()
     for file_name, df_changes in changes_per_file.items():
             # get how many times there was a diffence between col
-            date_columns = df_changes.columns.difference(['date', 'linac', 'file_name', 'item', 'part', df_changes.columns[-1]])
+            date_columns = df_changes.columns.difference(['date', 'linac', 'file_name', 'item', 'part', 'category', df_changes.columns[-1]])
 
             #to not see part 45
             if see_part_45 == False:
@@ -127,7 +144,7 @@ return:
 @st.cache_data 
 def make_changes_per_file(df):
     # change df
-    df_pivot = df.pivot(index=["linac", "file_name", "item", "part"], columns="date", values="value")
+    df_pivot = df.pivot(index=["linac", "file_name", "item", "part", "category", "Resolution"], columns="date", values="value")
     df_pivot.reset_index(inplace=True)
 
     # the dates all the different file types been uploaded
@@ -142,11 +159,10 @@ def make_changes_per_file(df):
         # Calculate how much difference there is between old and new
         df_changes =  df_change.iloc[:,1:].values - df_change.iloc[:,:-1].values
         # make a df from the changes and the information of linac, item en part
-        df_changed = pd.concat([df_pivot[df_pivot["file_name"] == file_name].loc[:,["linac", "item", "part"]].reset_index(), 
+        df_changed = pd.concat([df_pivot[df_pivot["file_name"] == file_name].loc[:,["linac", "item", "part", "category"]].reset_index(), 
                 pd.DataFrame(df_changes, columns=df_change.columns[1:])], axis=1)
         # add first entry date
         df_changed[f"first_entry: {file_date[0]}"] = df_change.iloc[:,0].values
-                    
         changes_per_file[file_name] = df_changed
 
 
@@ -178,7 +194,8 @@ def grouped_plot(changes_per_file, groups, file_name):
         df_changes = grouped[grouped["groep"] == group]
         #get de sum of amount of changes
         plotting = list((df_changes[date_columns] != 0).sum()[:-1]) 
-        first_date = re.findall(r"\d{4}-\d{2}-\d{2}", df_changes.columns[-3])[0]
+    
+        first_date = re.findall(r"\d{4}-\d{2}-\d{2}", df_changes.columns[-2])[0]
 
         data = {
             "Amount" : plotting,
@@ -240,8 +257,8 @@ return:
     selected dataframe 
 """
 @st.cache_data 
-def select_linac(df):
-    return select_data(st.session_state.linac_linac_compare_df1, df, col_n="linac")
+def select_linac(df, linac):
+    return select_data(linac, df, col_n="linac")
 
 """
 make the dataframe to display that contains the differences per item per date
@@ -260,9 +277,13 @@ input:
 return:
     dataframe 
 """
-def make_compare_df(df):
+def make_compare_df(df, linac):
     # grab only selected data
-    newdf = select_linac(df)
+    newdf = select_linac(df, linac)
+
+    #to not see part 45
+    if st.session_state.see_part_45 == False:
+        newdf = newdf[newdf["part"] != 45]
 
     # combine the 2 dates
     filterddf = pd.concat(
@@ -272,16 +293,17 @@ def make_compare_df(df):
 
     # calculate the difference
     changes_per_file = make_changes_per_file(filterddf)
+
     
     #to remove the item & part if has 0 difference
     if st.session_state.none_changes_compare_linacs == False:
-        changes_per_file = {filename: df_changes[(df_changes.iloc[:,4:-1] != 0).any(axis=1)] for filename, df_changes in changes_per_file.items()}
+        changes_per_file = {filename: df_changes[(df_changes.iloc[:,5:-1] != 0).any(axis=1)] for filename, df_changes in changes_per_file.items()}
     
     #make it to a df to show
     total_df = pd.DataFrame()
     for filename, df_changes in changes_per_file.items():
 
-        if df_changes.columns[-2] != "part":
+        if df_changes.columns[-3] != "part":
 
             old_data = df_changes[df_changes.columns[-1]]
             dif = df_changes[df_changes.columns[-2]]
@@ -290,6 +312,7 @@ def make_compare_df(df):
                     "File name": [filename] * len(df_changes),
                     "Item & part": "I:"+ df_changes["item"].astype(str) + " P:"+ df_changes["part"].astype(str),
                     "Difference": dif.tolist(),
+                    "category": df_changes["category"].tolist(),
                     "Old data": old_data.tolist(),
                     "New data": list(old_data + dif)
                 }
@@ -315,9 +338,9 @@ def select_file_name(df, filter):
 def multiple_plot_nes(df):
     maxus = []
     #get the type of different kind is present
-    items = list(set(df["Item & part"]))
+    items = list(set(df["Category"]))
     for item in items:
-        maxus.append(int(df[df["Item & part"] == item]["Value"].max()))
+        maxus.append(int(df[df["Category"] == item]["Value"].max()))
     # determine the differences between the lowest and highest value of a kind
     s_maxus = sorted(maxus)
     if s_maxus[0] - s_maxus[-1] > 2000 or s_maxus[0] - s_maxus[-1] < -2000:
@@ -332,31 +355,20 @@ input:
 return:
     plotly line object
 """
-@st.cache_data 
-def make_diff_plot_comparedf(df, ips, filetype):
-    newdf = select_file_name(df, filetype) 
-
-    # make the differences per file
-    changes_per_file = make_changes_per_file(newdf)
-
-    # translate ips
-    # ips = reverse_translate_part_item(ips)
-
+def make_diff_plot_comparedf(changes_per_file, ips, newdf):
     #make the df to show
     total_df = pd.DataFrame()
     for filename, df_changes in changes_per_file.items():
         if df_changes.columns[-2] != "part":
-            #add of the item en part
-            df_changes["Item & part"] = "I:"+ df_changes["item"].astype(str) + " P:"+ df_changes["part"].astype(str)
-
-            dates = list(df_changes.columns)[4:-2]
+            #add of the resolution
+            df_changes = df_changes.merge(newdf[["Resolution", "item"]], on="item", how="left")
+            dates = list(df_changes.columns)[5:-2]
             dates.append(re.findall(r"\d{4}-\d{2}-\d{2}", df_changes.columns[-2])[0])
             dates = sorted(dates)
 
 
             for ip in ips:
-                ip_df = df_changes[df_changes["Item & part"] == ip]
-
+                ip_df = df_changes[df_changes["category"] == ip]
                 #make the amount values again from the differences
                 first_entry = ip_df.iloc[:,-2].values[0]
                 difference = ip_df[dates[1:]].values[0]
@@ -364,22 +376,42 @@ def make_diff_plot_comparedf(df, ips, filetype):
 
                 data = {
                         "Linac": [df_changes["linac"][1]] * len(dates),
-                        "Item & part": [ip] * len(dates),
+                        "Category": [ip] * len(dates),
                         "Date": dates,
-                        "Value": total_list
+                        "Value": total_list,
+                        "Resolution": [str(ip_df["Resolution"].values[0])] * len(dates) 
                     }
-                
+
                 temp_df = pd.DataFrame(data) 
                 total_df = pd.concat([total_df, temp_df])
 
     # to check if both the items are spread more than 2000 apart
     if multiple_plot_nes(total_df):
-        fig = make_mulitple_grouped_plot(total_df, split_on="Item & part", plot_on="Value")
-        fig.update_layout(title_text="The value per Item & part per linac over the time", height=150*len(list(set(total_df["Item & part"]))))
+        fig = make_mulitple_grouped_plot(total_df, split_on="Category", plot_on="Value")
+        fig.update_layout(title_text="The value per category over the time", height=150*len(list(set(total_df["Category"]))))
     else:
-        fig = px.line(total_df, x='Date', y='Value', color='Item & part', markers=True, symbol='Linac', title= "The value per Item & part per linac over the time")
+        fig = px.line(total_df, x='Date', y='Value', color='Category', hover_data=["Resolution"], markers=True, title= "The value per Item & part per linac over the time")
     return fig
 
+def det_interesting_cat(df, filetype):
+    newdf = select_file_name(df, filetype) 
+
+    newdf = select_data(df=newdf, filter_on=st.session_state.linac_total_fig, col_n="linac")
+
+    #to not see part 45
+    if st.session_state.see_part_45 == False:
+        tempdf = newdf[newdf["part"] != 45]
+
+    # make the differences per file
+    changes_per_file = make_changes_per_file(tempdf)
+    to_plot = make_changes_per_file(newdf)
+
+    #to remove the item & part if has 0 difference
+    if st.session_state.none_changes_compare_linacs == False:
+        changes_per_file = {filename: df_changes[(df_changes.iloc[:,5:-1] != 0).any(axis=1)] for filename, df_changes in changes_per_file.items()}
+
+    ips = set(changes_per_file[filetype]["category"])
+    return to_plot, ips, newdf
 
 @st.cache_data 
 def translate_filename(df, translate):
@@ -424,6 +456,12 @@ def translate_values(df):
     
     return df
 
+def difference_plot(df, file_type):
+    newdf = select_data(file_type, df, "File name")
+    newdf = newdf.melt(id_vars=["category", "File name"], value_vars=["Old data", "New data"])
+
+    fig = px.scatter(newdf, x='category', y='value', color='variable', symbol="File name" ,title= "The differences per category over the selected data")
+    return fig
 
 def extract_item_part(text):
     match = re.search(r'I:(\d+)\s+P:(\d+)', text)
@@ -432,31 +470,6 @@ def extract_item_part(text):
         part = int(match.group(2))
         return pd.Series([item, part])
     return pd.Series([None, None])
-
-# def translate_part_item(to_translate):
-#     #get the translate table
-#     linac_items = st.session_state.linac_items
-
-#     df = pd.DataFrame({"Item & part" : to_translate})
-#     # Apply to the dataframe
-#     df[["item", "part"]] = df["Item & part"].apply(extract_item_part)
-#     #translate
-#     df = df.merge(linac_items[["Item name", "Category"]], left_on="item", right_on="Item name", how="left")
-#     # for reverse translate
-#     st.session_state["translated_item"] = df
-#     output = df["item"].astype(str) + " " + df["Category"]
-#     return output.tolist()
-
-# def reverse_translate_part_item(to_translate):
-#     comparing = st.session_state.translated_item
-#     output = []
-#     for text in to_translate:
-#         numbers = re.findall(r'\d+', text)
-#         item_part = comparing[comparing["item"] == numbers[0]]["Item & part"].tolist()
-#         output.append(item_part[0])
-
-
-
 
 
 @st.cache_data 
@@ -491,7 +504,9 @@ def edit_db_data(df):
     return df
 
 
-df_db = get_db_data("data/cal_changed.csv")
+df_db = get_db_data("data/calblocks_update_table_cal_headers.csv", 
+                    "data/calblocks_update_table_cal_items.csv",
+                    "data/calblocks_update_table_cal_values.csv")
 
 linac_items = get_transl_data("data/translate_tbl.csv")
 linac_items["Item name"] =  linac_items["Item name"].str.extract(r'i(\d+)').astype("float")
@@ -521,32 +536,40 @@ amount_plot.selectbox(label="The type of file you want to see", options=st.sessi
 grouped_amount_plot = amount_plot.expander(label="See the changes per group")
 grouped_amount_plot.plotly_chart(grouped_plot(st.session_state.changes_per_file, grouped_partly, st.session_state.type_file_grouped_fig))
 
+diff_plot = st.container(border=True)
+
 compare_linacs = st.container(border=True)
 cl1, cl2, cl3 = compare_linacs.columns(3)
 cl1.checkbox("See the Part & items that had no changes", key="none_changes_compare_linacs")
 
+btn1, btn2 = diff_plot.columns(2)
+### dit is nu voor de linac bovenaan gekozen
+btn1.selectbox(label='File type', options=st.session_state.types_file_total_amount, key="file_type_diff_plot")
+btn2options = list(set(df_db[df_db["file_name"] == st.session_state.file_type_diff_plot]["category"].values))
+changes_per_file, ips_options, newdf = det_interesting_cat(df_db, st.session_state.file_type_diff_plot)
+diff_plot.write(ips_options)
+try:
+    btn2.multiselect(label="Part & item combination", options=btn2options, default=btn2options[0], key="i_and_p")
+    diff_plot.plotly_chart(make_diff_plot_comparedf(changes_per_file, st.session_state.i_and_p, newdf))
+except Exception as e:
+    print(e)
+    import traceback
+    traceback.print_exc()
+    diff_plot.write("Select the dates in the table above that the file is twice present and then choose a Part & item you want to see")
+
+
 multiple1, multiple2  = compare_linacs.columns(2)
 compare_dfs = compare_linacs.expander(label= "see the dataframes with the selected data")
 df1, df2  = compare_dfs.columns(2)
+compare_plot = compare_linacs.expander(label= "see the plot with the difference of the selected data")
 
 
 multiple1.selectbox(label="The Linac you want to see", options=sorted(list(set(df_db["linac"]))), key="linac_linac_compare_df1")
-cl2.selectbox(label="The date you want to compare to", options=sorted(list(set(df_db[df_db["linac"] == st.session_state.linac_linac_compare_df1]["date"]))), key="old_date_linac_compare_df1")
-cl3.selectbox(label="The date you want to see the difference of", options=sorted(list(set(df_db[df_db["linac"] == st.session_state.linac_linac_compare_df1]["date"])))[1:], key="new_date_linac_compare_df1")
-compare_df = df1.data_editor(make_compare_df(df_db), key="linac_compare_df")
 multiple2.selectbox(label="The Linac you want to see", options=sorted(list(set(df_db["linac"]))), key="linac_linac_compare_df2")
-compare_df2 = df2.data_editor(make_compare_df(df_db), key="linac_compare_df2")
+cl2.selectbox(label="The date you want to compare to", options=sorted(list(set(df_db[df_db["linac"] == st.session_state.linac_linac_compare_df1]["date"])), reverse=True), key="old_date_linac_compare_df1")
+cl3.selectbox(label="The date you want to see the difference of", options=sorted(list(set(df_db[df_db["linac"] == st.session_state.linac_linac_compare_df1]["date"])), reverse=True)[1:], key="new_date_linac_compare_df1")
+compare_df = df1.data_editor(make_compare_df(df_db, st.session_state.linac_linac_compare_df1), key="linac_compare_df")
+compare_df2 = df2.data_editor(make_compare_df(df_db, st.session_state.linac_linac_compare_df2), key="linac_compare_df2")
+compare_plot.plotly_chart(difference_plot(compare_df, st.session_state.type_file_total_fig))
 
-
-diff_plot = st.container(border=True)
-btn1, btn2 = diff_plot.columns(2)
-btn1.selectbox(label='File type', options=set(compare_df["File name"]), key="file_type_diff_plot")
-#translate_part_item()
-btn2options = list(compare_df[compare_df["File name"] == st.session_state.file_type_diff_plot]["Item & part"].values)
-try:
-    btn2.multiselect(label="Part & item combination", options=btn2options, default=btn2options[0], key="i_and_p")
-    diff_plot.plotly_chart(make_diff_plot_comparedf(df_db, st.session_state.i_and_p ,st.session_state.file_type_diff_plot))
-except Exception as e:
-    print(e)
-    diff_plot.write("Select the dates in the table above that the file is twice present and then choose a Part & item you want to see")
 
