@@ -1,4 +1,5 @@
 import streamlit as st
+import numpy as np
 import pandas as pd
 import re
 import plotly.express as px
@@ -347,6 +348,14 @@ def multiple_plot_nes(df):
         return True
     return False
 
+def detect_outliers(group, sma_window=3, std_window=6, k=2):
+    group = group.copy()
+    group['SMA'] = group['Value'].rolling(window=sma_window).mean()
+    group['residual'] = group['Value'] - group['SMA']
+    group['rolling_std'] = group['residual'].rolling(window=std_window).std()
+    group['is_outlier'] = np.abs(group['residual']) > (k * group['rolling_std'])
+    return group
+
 """
 make the plot to compare multiple part and items
 
@@ -355,7 +364,9 @@ input:
 return:
     plotly line object
 """
+@st.cache_data 
 def make_diff_plot_comparedf(changes_per_file, ips, newdf):
+
     #make the df to show
     total_df = pd.DataFrame()
     for filename, df_changes in changes_per_file.items():
@@ -379,19 +390,38 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
                         "Category": [ip] * len(dates),
                         "Date": dates,
                         "Value": total_list,
-                        "Resolution": [str(ip_df["Resolution"].values[0])] * len(dates) 
+                        "Unit": [str(ip_df["Resolution"].values[0])] * len(dates) 
                     }
 
                 temp_df = pd.DataFrame(data) 
                 total_df = pd.concat([total_df, temp_df])
 
+    #determine ouliers using SMA
+    df_outlier_scanned = (
+        total_df
+        .groupby("Category", group_keys=False)
+        .apply(detect_outliers)
+    )
+    # Filter outliers
+    outliers = df_outlier_scanned[df_outlier_scanned["is_outlier"]]
+    
     # to check if both the items are spread more than 2000 apart
     if multiple_plot_nes(total_df):
         fig = make_mulitple_grouped_plot(total_df, split_on="Category", plot_on="Value")
         fig.update_layout(title_text="The value per category over the time", height=150*len(list(set(total_df["Category"]))))
     else:
-        fig = px.line(total_df, x='Date', y='Value', color='Category', hover_data=["Resolution"], markers=True, title= "The value per Item & part per linac over the time")
+        fig = px.line(total_df, x='Date', y='Value', color='Category', hover_data=["Unit"], markers=True, title= "The value per Item & part over the time")
+        #add outliers as points
+        fig.add_scatter(x=outliers["Date"],
+                y=outliers["Value"],
+                mode="markers",
+                marker=dict(
+                    color='black',
+                    size=5
+                ),
+               name='Outliers')
     return fig
+
 
 def det_interesting_cat(df, filetype):
     newdf = select_file_name(df, filetype) 
@@ -512,9 +542,6 @@ linac_items = get_transl_data("data/translate_tbl.csv")
 linac_items["Item name"] =  linac_items["Item name"].str.extract(r'i(\d+)').astype("float")
 st.session_state["linac_items"] = linac_items
 
-agility_parts_items = get_transl_data("data/agility_parts_items.csv")
-st.session_state["agility_parts_items"] = agility_parts_items
-
 
 linac_parts = get_transl_data("data/Itemparts.csv")
 
@@ -552,10 +579,7 @@ try:
     btn2.multiselect(label="Part & item combination", options=btn2options, default=btn2options[0], key="i_and_p")
     diff_plot.plotly_chart(make_diff_plot_comparedf(changes_per_file, st.session_state.i_and_p, newdf))
 except Exception as e:
-    print(e)
-    import traceback
-    traceback.print_exc()
-    diff_plot.write("Select the dates in the table above that the file is twice present and then choose a Part & item you want to see")
+    diff_plot.write("Choose a Part & item you want to see")
 
 
 multiple1, multiple2  = compare_linacs.columns(2)
@@ -570,6 +594,9 @@ cl2.selectbox(label="The date you want to compare to", options=sorted(list(set(d
 cl3.selectbox(label="The date you want to see the difference of", options=sorted(list(set(df_db[df_db["linac"] == st.session_state.linac_linac_compare_df1]["date"])), reverse=True)[1:], key="new_date_linac_compare_df1")
 compare_df = df1.data_editor(make_compare_df(df_db, st.session_state.linac_linac_compare_df1), key="linac_compare_df")
 compare_df2 = df2.data_editor(make_compare_df(df_db, st.session_state.linac_linac_compare_df2), key="linac_compare_df2")
-compare_plot.plotly_chart(difference_plot(compare_df, st.session_state.type_file_total_fig))
+try:
+    compare_plot.plotly_chart(difference_plot(compare_df, st.session_state.type_file_total_fig))
+except:
+    pass
 
 
