@@ -91,7 +91,7 @@ def total_amount_fig(df):
     plotting_per_file = make_total_amount_to_plot(changes_per_file, st.session_state.see_part_45)
     st.session_state["changes_per_file"] = changes_per_file
     st.session_state["types_file_total_amount"] = sorted(list(set(plotting_per_file["File name"])))
-    fig_total = px.line(plotting_per_file, x='Date', y='Amount', color='File name', markers=True, hover_data="First entry", title= "Total amount of differences per file per linac")
+    fig_total = px.line(plotting_per_file, x='Date', y='Amount', color='File name', markers=True, hover_data="First entry", title= "Total amount of differences per file for the selected linac")
     return fig_total
 
 
@@ -101,6 +101,7 @@ make the object for the total mount plot
 
 input:
     changes_per_file, dict: contains filenames, df_changes: df with the changes from last date 
+    see_part_45, boolean: the output of a checkbox
 return:
     plotting_per_file, dataframe for plotting the total amount plot
 """
@@ -275,6 +276,7 @@ make the dataframe to display that contains the differences per item per date
 
 input:
     df, dataframe
+    linac, string: the ouput of a selectbox
 return:
     dataframe 
 """
@@ -336,6 +338,14 @@ return:
 def select_file_name(df, filter):
         return select_data(filter, df, "file_name")
 
+"""
+To check if its nessecary to make of the one plot multiple plots if the y-axis has a wide spread.
+
+input: 
+    df, dataframe: that will be plotted
+return:
+    boolean, if a multiplot is nessecary
+"""
 def multiple_plot_nes(df):
     maxus = []
     #get the type of different kind is present
@@ -344,10 +354,19 @@ def multiple_plot_nes(df):
         maxus.append(int(df[df["Category"] == item]["Value"].max()))
     # determine the differences between the lowest and highest value of a kind
     s_maxus = sorted(maxus)
-    if s_maxus[0] - s_maxus[-1] > 2000 or s_maxus[0] - s_maxus[-1] < -2000:
+    if s_maxus[0] - s_maxus[-1] > 2000 or s_maxus[0] - s_maxus[-1] < -100:
         return True
     return False
 
+"""
+Detecting for outliers in the given data using SMA
+
+input:
+    group, dataframe: contains the data of a single group
+output:
+    group, dataframe: with the SMA values added
+
+"""
 def detect_outliers(group, sma_window=3, std_window=6, k=2):
     group = group.copy()
     group['SMA'] = group['Value'].rolling(window=sma_window).mean()
@@ -360,7 +379,9 @@ def detect_outliers(group, sma_window=3, std_window=6, k=2):
 make the plot to compare multiple part and items
 
 input:
-    df, dataframe: 
+    changes_per_file, dict: filename: df with the changes per item
+    ips, list: all the choosen catgories
+    newdf, dataframe: the data that needs to be plotted
 return:
     plotly line object
 """
@@ -377,10 +398,9 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
             dates.append(re.findall(r"\d{4}-\d{2}-\d{2}", df_changes.columns[-2])[0])
             dates = sorted(dates)
 
-
             for ip in ips:
                 ip_df = df_changes[df_changes["category"] == ip]
-                #make the amount values again from the differences
+                #make the amount values again from the differences         
                 first_entry = ip_df.iloc[:,-2].values[0]
                 difference = ip_df[dates[1:]].values[0]
                 total_list = list(accumulate([first_entry] + difference.tolist()))
@@ -390,6 +410,7 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
                         "Category": [ip] * len(dates),
                         "Date": dates,
                         "Value": total_list,
+                        "Part": [ip_df["part"].values[0]] * len(dates),
                         "Unit": [str(ip_df["Resolution"].values[0])] * len(dates) 
                     }
 
@@ -405,12 +426,14 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
     # Filter outliers
     outliers = df_outlier_scanned[df_outlier_scanned["is_outlier"]]
     
-    # to check if both the items are spread more than 2000 apart
+    # to check if both the items are spread more than 100 apart
     if multiple_plot_nes(total_df):
+        # make multiple line plots
         fig = make_mulitple_grouped_plot(total_df, split_on="Category", plot_on="Value")
         fig.update_layout(title_text="The value per category over the time", height=150*len(list(set(total_df["Category"]))))
     else:
-        fig = px.line(total_df, x='Date', y='Value', color='Category', hover_data=["Unit"], markers=True, title= "The value per Item & part over the time")
+        #make one plot
+        fig = px.line(total_df, x='Date', y='Value', color='Category', hover_data=["Unit", "Part"], markers=True, title= "The value per Item & part over the time")
         #add outliers as points
         fig.add_scatter(x=outliers["Date"],
                 y=outliers["Value"],
@@ -422,7 +445,17 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
                name='Outliers')
     return fig
 
+"""
+Determine categories with change in them that will be shown on the page
 
+input:
+    df, dataframe: the data selected
+    filetype, str: output of the chosen filetype
+return:
+    to_plot, changes_per_file
+    ips, list: possible categories that have change
+    newdf, dataframe: only has the chosen linac and filetype
+"""
 def det_interesting_cat(df, filetype):
     newdf = select_file_name(df, filetype) 
 
@@ -430,10 +463,10 @@ def det_interesting_cat(df, filetype):
 
     #to not see part 45
     if st.session_state.see_part_45 == False:
-        tempdf = newdf[newdf["part"] != 45]
+        newdf = newdf[newdf["part"] != 45]
 
     # make the differences per file
-    changes_per_file = make_changes_per_file(tempdf)
+    changes_per_file = make_changes_per_file(newdf)
     to_plot = make_changes_per_file(newdf)
 
     #to remove the item & part if has 0 difference
@@ -443,6 +476,15 @@ def det_interesting_cat(df, filetype):
     ips = set(changes_per_file[filetype]["category"])
     return to_plot, ips, newdf
 
+""" 
+The filenames are numberd, translate it to energy levels
+
+input, 
+    df, dataframe, the used data
+    translate, dataframe: the translate table
+return,
+    df, dataframe, the used data with translated file names
+"""
 @st.cache_data 
 def translate_filename(df, translate):
     #get the translation for part 32
@@ -453,7 +495,9 @@ def translate_filename(df, translate):
         df = df.replace(filename, value)
     return df
 
-# Function to check if a value is numeric (either integer or float)
+"""
+Function to check if a value is numeric (either integer or float)
+"""
 def is_numeric(value):
     try:
         # Try to convert to a float
@@ -486,6 +530,11 @@ def translate_values(df):
     
     return df
 
+"""
+plot with the difference values
+
+????
+"""
 def difference_plot(df, file_type):
     newdf = select_data(file_type, df, "File name")
     newdf = newdf.melt(id_vars=["category", "File name"], value_vars=["Old data", "New data"])
@@ -493,15 +542,9 @@ def difference_plot(df, file_type):
     fig = px.scatter(newdf, x='category', y='value', color='variable', symbol="File name" ,title= "The differences per category over the selected data")
     return fig
 
-def extract_item_part(text):
-    match = re.search(r'I:(\d+)\s+P:(\d+)', text)
-    if match:
-        item = int(match.group(1))
-        part = int(match.group(2))
-        return pd.Series([item, part])
-    return pd.Series([None, None])
-
-
+"""
+editing of the database data
+"""
 @st.cache_data 
 def edit_db_data(df):
     # to translate energy filename
@@ -533,21 +576,18 @@ def edit_db_data(df):
 
     return df
 
-
+# read data
 df_db = get_db_data("data/calblocks_update_table_cal_headers.csv", 
                     "data/calblocks_update_table_cal_items.csv",
                     "data/calblocks_update_table_cal_values.csv")
-
+# edit the data
 linac_items = get_transl_data("data/translate_tbl.csv")
 linac_items["Item name"] =  linac_items["Item name"].str.extract(r'i(\d+)').astype("float")
 st.session_state["linac_items"] = linac_items
-
-
-linac_parts = get_transl_data("data/Itemparts.csv")
-
-grouped_partly = get_grouped_data("data/groups_partly.tsv")
-
 df_db = edit_db_data(df_db)
+
+#load grouping
+grouped_partly = get_grouped_data("data/groups_partly.tsv")
 
 # layout
 layout = st.container(border=True)
@@ -561,6 +601,7 @@ a3.selectbox(label="The Linac you want to see", options=sorted(list(set(df_db["l
 amount_plot.plotly_chart(total_amount_fig(df_db))
 amount_plot.selectbox(label="The type of file you want to see", options=st.session_state.types_file_total_amount, key="type_file_grouped_fig")
 grouped_amount_plot = amount_plot.expander(label="See the changes per group")
+grouped_amount_plot.write("The groups are based on the system drawings, see [here](https://isala.sharepoint.com/sites/AFDRadiotherapie/RT%20afdelingsschijf/Forms/AllItems.aspx?id=%2Fsites%2FAFDRadiotherapie%2FRT%20afdelingsschijf%2FKlinische%20Fysica%2FOpenbaar%2FProducthandleidingen%2FElekta%20Versneller%2FEVO%2FLinac%20%2D%20System%20Diagrams%20%28from%20Linac%20152972%29%20%2D%201543441%5F04%2Epdf&parent=%2Fsites%2FAFDRadiotherapie%2FRT%20afdelingsschijf%2FKlinische%20Fysica%2FOpenbaar%2FProducthandleidingen%2FElekta%20Versneller%2FEVO).")
 grouped_amount_plot.plotly_chart(grouped_plot(st.session_state.changes_per_file, grouped_partly, st.session_state.type_file_grouped_fig))
 
 diff_plot = st.container(border=True)
@@ -575,10 +616,13 @@ btn1.selectbox(label='File type', options=st.session_state.types_file_total_amou
 btn2options = list(set(df_db[df_db["file_name"] == st.session_state.file_type_diff_plot]["category"].values))
 changes_per_file, ips_options, newdf = det_interesting_cat(df_db, st.session_state.file_type_diff_plot)
 diff_plot.write(ips_options)
+
 try:
     btn2.multiselect(label="Part & item combination", options=btn2options, default=btn2options[0], key="i_and_p")
     diff_plot.plotly_chart(make_diff_plot_comparedf(changes_per_file, st.session_state.i_and_p, newdf))
 except Exception as e:
+    import traceback
+    traceback.print_exc()
     diff_plot.write("Choose a Part & item you want to see")
 
 

@@ -1,1 +1,27 @@
-Welkom bij het stage project: Analyseren van logfiles van de Linac
+# Logfile Analyse
+Welcome to the intern project: analysing of the linac logfiles
+
+## Background
+
+
+## Purpose   
+
+## Getting started  
+
+### Pre requisities  
+
+### How to work with it    
+
+## Project structure  
+
+### Dashboard  
+The dashboard is one main page:   
+**insert picture**
+It's separated in 3 usable planes:  
+The first plane you need to choose your linac and the group type of file you want to see. It will show you the total amount of changes per file. You can unfold the bar to see these changes grouped per chosen file type. These groups are based on the systematic drawings of the linacs from Elekta. There is a checkbox to allow or not allow the usage of data that has part 45.  
+  
+In the second plane The linac chosen in the first plan will be used aswell. You need to choose your filetype and you can choose multiple item names. The plot underneath will show the whole time series of the values with these item names. It will also show you outliers, these could be to heavily adjusted values. Based on a SMA.  
+
+The last plane needs to be remade.....  
+
+### EDA's
