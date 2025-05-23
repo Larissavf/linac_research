@@ -185,10 +185,14 @@ def grouped_plot(changes_per_file, groups, file_name):
     #get the correct df_changes
     df = changes_per_file[file_name]
 
+    #to not see part 45
+    if st.session_state.see_part_45 == False:
+        df = df[df["part"] != 45]
+
     #get amount of changes per date
     date_columns = df.columns.difference(['date', 'linac', 'file_name', 'item', 'part', df.columns[-1]])
     #add the correct group after the correct item
-    grouped = pd.merge(df, groups[["item","groep"]], on="item", how="left")
+    grouped = pd.merge(df, groups[["item", "part","groep"]], on=["item", "part"], how="left")
     
     #make the df for plotting of this data
     plotting_per_group = pd.DataFrame()
@@ -196,6 +200,25 @@ def grouped_plot(changes_per_file, groups, file_name):
         df_changes = grouped[grouped["groep"] == group]
         #get de sum of amount of changes
         plotting = list((df_changes[date_columns] != 0).sum()[:-1]) 
+
+        #get the changed items
+        df_for_items = df_changes[df_changes[date_columns] != 0]
+
+
+        try:
+            for_items = df_for_items[date_columns].copy()
+            # replace the amount with the category
+            for col in date_columns:
+                for_items[col] = df_for_items.apply(
+                    lambda row: row["category"] if pd.notna(row[col]) else None,
+                    axis=1
+                )
+            # get an list per date which items been changed
+            items_plot = [for_items[col].dropna().unique().tolist() for col in date_columns]
+        except:
+            items_plot = [""] * len(date_columns) 
+        print(items_plot)
+        print(df_changes)
     
         first_date = re.findall(r"\d{4}-\d{2}-\d{2}", df_changes.columns[-2])[0]
 
@@ -204,12 +227,13 @@ def grouped_plot(changes_per_file, groups, file_name):
             "Date": list(date_columns[:-1]),    
             "File name": [file_name] * len(plotting),
             "First entry": [first_date] * len(plotting),
-            "Group": [group] * len(plotting)
+            "Group": [group] * len(plotting),
+            "item": items_plot[:-1]
         }
 
         plotting_per = pd.DataFrame(data) 
         plotting_per_group = pd.concat([plotting_per_group, plotting_per])
-    fig = make_mulitple_grouped_plot(plotting_per_group, split_on="Group", plot_on="Amount")
+    fig = make_multiple_grouped_plot(plotting_per_group, split_on="Group", plot_on="Amount", hover_data = "item")
     fig.update_layout(title_text="Grouped amount of differences per file type", height=150*len(list(set(plotting_per_group["Group"]))))
 
     return fig
@@ -225,29 +249,38 @@ return:
     plotly figure
 """
 @st.cache_data 
-def make_mulitple_grouped_plot(plotting, split_on, plot_on):
-    #get the differnt types of groups
+def make_multiple_grouped_plot(plotting, split_on, plot_on, hover_data):
+    # get nessecary
     groups = list(set(plotting[split_on]))
     groups = [x for x in groups if str(x) != 'nan']
 
-    #make a subplot for every type of group
+    # create fig
     fig = make_subplots(rows=len(groups), cols=1, shared_xaxes=True, subplot_titles=groups)
 
     for i, group in enumerate(groups):
         df = plotting[plotting[split_on] == group]
+        #the hoverdata
+        custom = df[[hover_data]].values
+
         fig.add_trace(
             go.Scatter(
-                x=df["Date"], 
-                y=df[plot_on], 
+                x=df["Date"],
+                y=df[plot_on],
                 mode="lines+markers",
                 name=group,
                 showlegend=False,
+                customdata=custom,
+                hovertemplate=
+                    "Datum: %{x}<br>" +
+                    f"{plot_on}:" "%{y}<br>" +
+                    f"{hover_data}:" "%{customdata[0]}<extra></extra>"
             ),
-            row=i+1, col=1
+            row=i + 1, col=1
         )
-    groups
 
+    fig.update_layout(height=300 * len(groups), title_text="Meerdere Groepen Plot")
     return fig
+
     
 
 """
@@ -429,7 +462,7 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
     # to check if both the items are spread more than 100 apart
     if multiple_plot_nes(total_df):
         # make multiple line plots
-        fig = make_mulitple_grouped_plot(total_df, split_on="Category", plot_on="Value")
+        fig = make_multiple_grouped_plot(total_df, split_on="Category", plot_on="Value", hover_data="Unit")
         fig.update_layout(title_text="The value per category over the time", height=150*len(list(set(total_df["Category"]))))
     else:
         #make one plot
@@ -548,12 +581,13 @@ editing of the database data
 @st.cache_data 
 def edit_db_data(df):
     # to translate energy filename
+    # 2 and 5 changed
     energy_dict = {
         0: "No energy set",
         1: "Low X-ray energy - 6 MV",
-        2: "High X-ray energy - 25 MV",
+        2: "Third X-ray energy - 10 MV",
         3: "energy: Radiographic X-ray",
-        4: "Third X-ray energy - 10 MV",
+        4: "High X-ray energy - 25 MV",
         5: "6 MV FFF energy",
         6: "10 MV FFF energy",
         7: "X MV FFF energy - Not used MV",
