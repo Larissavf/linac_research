@@ -71,7 +71,7 @@ return:
     filterd dataframe
 """
 @st.cache_data
-def select_data(filter_on, df, col_n):
+def select_data_from_df(filter_on, df, col_n):
     df[col_n] = df[col_n].astype(str)
     return df[df[col_n].str.contains(fr'{str(filter_on)}', regex=True)]
 
@@ -84,8 +84,8 @@ return:
     plotly line object
 """
 def total_amount_fig(df):
-    selected_df = select_data(st.session_state.linac_total_fig, df , col_n="linac")
-    selected_df = select_data(st.session_state.type_file_total_fig, selected_df, col_n="file_name")
+    selected_df = select_data_from_df(st.session_state.linac_total_fig, df , col_n="linac")
+    selected_df = select_data_from_df(st.session_state.type_file_total_fig, selected_df, col_n="file_name")
 
     changes_per_file = make_changes_per_file(selected_df)
     plotting_per_file = make_total_amount_to_plot(changes_per_file, st.session_state.see_part_45)
@@ -94,6 +94,12 @@ def total_amount_fig(df):
     fig_total = px.line(plotting_per_file, x='Date', y='Amount', color='File name', markers=True, hover_data="First entry", title= "Total amount of differences per file for the selected linac")
     return fig_total
 
+
+def filter_out_p45(df):
+     #to not see part 45
+    if st.session_state.see_part_45 == False:
+        df = df[df["part"] != 45]
+    return df
 
 
 """
@@ -113,9 +119,7 @@ def make_total_amount_to_plot(changes_per_file, see_part_45):
             # get how many times there was a diffence between col
             date_columns = df_changes.columns.difference(['date', 'linac', 'file_name', 'item', 'part', 'category', df_changes.columns[-1]])
 
-            #to not see part 45
-            if see_part_45 == False:
-                df_changes = df_changes[df_changes["part"] != 45]
+            df_changes = filter_out_p45(df_changes)
 
             plotting = list((df_changes[date_columns] != 0).sum()[:-1]) 
 
@@ -180,14 +184,14 @@ input:
 return:
     plotly figure
 """
+### complex???
 @st.cache_data 
 def grouped_plot(changes_per_file, groups, file_name):
     #get the correct df_changes
     df = changes_per_file[file_name]
 
-    #to not see part 45
-    if st.session_state.see_part_45 == False:
-        df = df[df["part"] != 45]
+    df = filter_out_p45(df)
+
 
     #get amount of changes per date
     date_columns = df.columns.difference(['date', 'linac', 'file_name', 'item', 'part', df.columns[-1]])
@@ -217,8 +221,6 @@ def grouped_plot(changes_per_file, groups, file_name):
             items_plot = [for_items[col].dropna().unique().tolist() for col in date_columns]
         except:
             items_plot = [""] * len(date_columns) 
-        print(items_plot)
-        print(df_changes)
     
         first_date = re.findall(r"\d{4}-\d{2}-\d{2}", df_changes.columns[-2])[0]
 
@@ -253,6 +255,9 @@ def make_multiple_grouped_plot(plotting, split_on, plot_on, hover_data):
     # get nessecary
     groups = list(set(plotting[split_on]))
     groups = [x for x in groups if str(x) != 'nan']
+
+    if len(groups) == 0:
+        return go.Figure()  # empyt figure
 
     # create fig
     fig = make_subplots(rows=len(groups), cols=1, shared_xaxes=True, subplot_titles=groups)
@@ -293,7 +298,7 @@ return:
 """
 @st.cache_data 
 def select_linac(df, linac):
-    return select_data(linac, df, col_n="linac")
+    return select_data_from_df(linac, df, col_n="linac")
 
 """
 make the dataframe to display that contains the differences per item per date
@@ -316,15 +321,12 @@ return:
 def make_compare_df(df, linac):
     # grab only selected data
     newdf = select_linac(df, linac)
-
-    #to not see part 45
-    if st.session_state.see_part_45 == False:
-        newdf = newdf[newdf["part"] != 45]
+    newdf = filter_out_p45(newdf)
 
     # combine the 2 dates
     filterddf = pd.concat(
-        [select_data(st.session_state.old_date_linac_compare_df1, newdf, col_n="date"), 
-        select_data(st.session_state.new_date_linac_compare_df1, newdf, col_n="date")]
+        [select_data_from_df(st.session_state.old_date_linac_compare_df1, newdf, col_n="date"), 
+        select_data_from_df(st.session_state.new_date_linac_compare_df1, newdf, col_n="date")]
     )
 
     # calculate the difference
@@ -359,17 +361,7 @@ def make_compare_df(df, linac):
     
     return total_df
 
-"""
-to make the bulk of the data smaller for compare df
 
-input:
-    df, dataframe
-return:
-    selected dataframe 
-"""
-@st.cache_data 
-def select_file_name(df, filter):
-        return select_data(filter, df, "file_name")
 
 """
 To check if its nessecary to make of the one plot multiple plots if the y-axis has a wide spread.
@@ -379,7 +371,7 @@ input:
 return:
     boolean, if a multiplot is nessecary
 """
-def multiple_plot_nes(df):
+def equires_multiple_plots_by_category_spread(df):
     maxus = []
     #get the type of different kind is present
     items = list(set(df["Category"]))
@@ -418,6 +410,7 @@ input:
 return:
     plotly line object
 """
+### complex??
 @st.cache_data 
 def make_diff_plot_comparedf(changes_per_file, ips, newdf):
 
@@ -460,7 +453,7 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
     outliers = df_outlier_scanned[df_outlier_scanned["is_outlier"]]
     
     # to check if both the items are spread more than 100 apart
-    if multiple_plot_nes(total_df):
+    if equires_multiple_plots_by_category_spread(total_df):
         # make multiple line plots
         fig = make_multiple_grouped_plot(total_df, split_on="Category", plot_on="Value", hover_data="Unit")
         fig.update_layout(title_text="The value per category over the time", height=150*len(list(set(total_df["Category"]))))
@@ -490,13 +483,9 @@ return:
     newdf, dataframe: only has the chosen linac and filetype
 """
 def det_interesting_cat(df, filetype):
-    newdf = select_file_name(df, filetype) 
-
-    newdf = select_data(df=newdf, filter_on=st.session_state.linac_total_fig, col_n="linac")
-
-    #to not see part 45
-    if st.session_state.see_part_45 == False:
-        newdf = newdf[newdf["part"] != 45]
+    newdf = select_data_from_df(filetype, df, "file_name")
+    newdf = select_data_from_df(df=newdf, filter_on=st.session_state.linac_total_fig, col_n="linac")
+    newdf = filter_out_p45(newdf)
 
     # make the differences per file
     changes_per_file = make_changes_per_file(newdf)
@@ -564,12 +553,47 @@ def translate_values(df):
     return df
 
 """
+The value need to be transformed with a certain value, based usual names.
+
+input: 
+    dataframe, that needs to be translated
+return:
+    dataframe, that has been adjusted to the certain value for a item
+"""
+def translate_linacs(df):
+    linacs = {2325: "linac1",
+              2638: "linac2",
+              2191: "linac3",
+              2983: "linac4",
+              7460: "linac5"}
+    for linac in linacs:
+        df = df.replace(linac, linacs[linac])
+    return df
+
+"""
+The value need to be transformed with a certain value, based on the elekta manual.
+
+input: 
+    dataframe, that needs to be translated
+return:
+    dataframe, that has been adjusted to the certain value for a item
+"""
+def translate_category(df): 
+    linac_items = st.session_state.linac_items
+    #translate the category
+    new_df = df.merge(linac_items[["Category", "Item name"]], left_on="item", right_on="Item name", how="left").drop(columns=["Item name", "category"])
+    #add item number
+    new_df["category"] = new_df["Category"] + " (" + new_df["item"].astype("str") + ")"
+
+    return new_df.drop(columns="Category")
+
+"""
 plot with the difference values
 
-????
+???? delete?
 """
 def difference_plot(df, file_type):
-    newdf = select_data(file_type, df, "File name")
+    newdf = select_data_from_df(file_type, df, "File name")
     newdf = newdf.melt(id_vars=["category", "File name"], value_vars=["Old data", "New data"])
 
     fig = px.scatter(newdf, x='category', y='value', color='variable', symbol="File name" ,title= "The differences per category over the selected data")
@@ -608,6 +632,10 @@ def edit_db_data(df):
 
     df = translate_values(df)
 
+    df = translate_linacs(df)
+
+    df = translate_category(df)
+
     return df
 
 # read data
@@ -616,6 +644,7 @@ df_db = get_db_data("data/calblocks_update_table_cal_headers.csv",
                     "data/calblocks_update_table_cal_values.csv")
 # edit the data
 linac_items = get_transl_data("data/translate_tbl.csv")
+linac_items["Item description"] = linac_items["Item name"].str.replace(r'^i\d+\s*-\s*', '', regex=True)
 linac_items["Item name"] =  linac_items["Item name"].str.extract(r'i(\d+)').astype("float")
 st.session_state["linac_items"] = linac_items
 df_db = edit_db_data(df_db)
@@ -652,7 +681,7 @@ changes_per_file, ips_options, newdf = det_interesting_cat(df_db, st.session_sta
 diff_plot.write(ips_options)
 
 try:
-    btn2.multiselect(label="Part & item combination", options=btn2options, default=btn2options[0], key="i_and_p")
+    btn2.multiselect(label="Part & item combination", options=btn2options, key="i_and_p")
     diff_plot.plotly_chart(make_diff_plot_comparedf(changes_per_file, st.session_state.i_and_p, newdf))
 except Exception as e:
     import traceback
