@@ -371,7 +371,7 @@ input:
 return:
     boolean, if a multiplot is nessecary
 """
-def equires_multiple_plots_by_category_spread(df):
+def requires_multiple_plots_by_category(df):
     maxus = []
     #get the type of different kind is present
     items = list(set(df["Category"]))
@@ -399,6 +399,16 @@ def detect_outliers(group, sma_window=3, std_window=6, k=2):
     group['rolling_std'] = group['residual'].rolling(window=std_window).std()
     group['is_outlier'] = np.abs(group['residual']) > (k * group['rolling_std'])
     return group
+
+def make_ratio_BF_BC(df):
+    # make the ratio
+    ratio = df[df["Category"] == "Bending F (305)"].copy()
+    ratio["ratio"] = df[df["Category"] == "Bending F (305)"]["Value"].values / df[df["Category"] == "Bending C (304)"]["Value"].values
+    # difference in the ratio
+    ratio_to_plot = ratio.iloc[1:]
+    ratio_to_plot["ratio diff"] = ratio["ratio"].iloc[1:].values - ratio["ratio"].iloc[:-1].values
+
+    return ratio_to_plot[ratio_to_plot["ratio diff"] != 0 ]
 
 """
 make the plot to compare multiple part and items
@@ -453,10 +463,26 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
     outliers = df_outlier_scanned[df_outlier_scanned["is_outlier"]]
     
     # to check if both the items are spread more than 100 apart
-    if equires_multiple_plots_by_category_spread(total_df):
+    if requires_multiple_plots_by_category(total_df):
         # make multiple line plots
         fig = make_multiple_grouped_plot(total_df, split_on="Category", plot_on="Value", hover_data="Unit")
         fig.update_layout(title_text="The value per category over the time", height=150*len(list(set(total_df["Category"]))))
+    elif ["Bending F (305)", "Bending C (304)"] == ips:
+        fig = px.line(total_df, x='Date', y='Value', color='Category', hover_data=["Unit", "Part"], markers=True, title= "The value per Item & part over the time")
+        # find the differences of the ratios
+        ratios_df = make_ratio_BF_BC(total_df)
+        final_ratio = total_df[total_df["Category"].isin(["Bending F (305)", "Bending C (304)"])].copy()
+        # do it for both of the lines
+        final_ratio = ratios_df.merge(final_ratio[["Date", "Value"]], left_on="Date", right_on="Date", how="inner")
+        fig.add_scatter(x=final_ratio["Date"],
+                y=final_ratio["Value_y"],
+                mode="markers",
+                marker=dict(
+                    color='Black',
+                    size=5
+                ),
+               name='Ratio difference')
+        
     else:
         #make one plot
         fig = px.line(total_df, x='Date', y='Value', color='Category', hover_data=["Unit", "Part"], markers=True, title= "The value per Item & part over the time")
@@ -652,6 +678,7 @@ df_db = edit_db_data(df_db)
 #load grouping
 grouped_partly = get_grouped_data("data/groups_partly.tsv")
 
+
 # layout
 layout = st.container(border=True)
 layout.title("Linac logfiles comparing")
@@ -674,14 +701,20 @@ cl1, cl2, cl3 = compare_linacs.columns(3)
 cl1.checkbox("See the Part & items that had no changes", key="none_changes_compare_linacs")
 
 btn1, btn2 = diff_plot.columns(2)
-### dit is nu voor de linac bovenaan gekozen
 btn1.selectbox(label='File type', options=st.session_state.types_file_total_amount, key="file_type_diff_plot")
-btn2options = list(set(df_db[df_db["file_name"] == st.session_state.file_type_diff_plot]["category"].values))
+btn2options = list(df_db[df_db["file_name"] == st.session_state.file_type_diff_plot]["category"].unique())
 changes_per_file, ips_options, newdf = det_interesting_cat(df_db, st.session_state.file_type_diff_plot)
 diff_plot.write(ips_options)
 
+# Zorg dat multiselect echt onthoudt wat is gekozen
+if "i_and_p" not in st.session_state:
+    st.session_state.i_and_p = []
+
+def update_selection():
+    st.session_state.i_and_p = st.session_state.temp_i_and_p
+
 try:
-    btn2.multiselect(label="Part & item combination", options=btn2options, key="i_and_p")
+    btn2.multiselect(label="Part & item combination", options=btn2options, default=st.session_state.i_and_p, key="temp_i_and_p", on_change=update_selection)
     diff_plot.plotly_chart(make_diff_plot_comparedf(changes_per_file, st.session_state.i_and_p, newdf))
 except Exception as e:
     import traceback
@@ -706,4 +739,5 @@ try:
 except:
     pass
 
+\
 
