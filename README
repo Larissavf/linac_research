@@ -2,26 +2,85 @@
 Welcome to the intern project: analysing of the linac logfiles
 
 ## Background
+__The lineaire accelerator (linac)__  
 
+
+__The logfiles__  
+The logfiles are detailed looked at in the different Explorativa Data Analysis (EDA)
 
 ## Purpose   
+- A tool to visualise different linac logfiles and visualize the links inbetween all the items 
+- Prediction of maintenance of the linac. 
 
 ## Getting started  
+Clone the Git repository:
+```bash
+   git clone https://github.com/Larissavf/linac_research
+```
 
 ### Pre requisities  
 
-### How to work with it    
+```bash
+python 3
+    - pandas v2.3.0
+    - scikit-learn v1.7.0
+    - streamlit v1.45.0
+    - seaborn v0.13
+    - matplotlib v3.10
+    - numpy v2.2.0
+    - plotly v6.0.1
+```
+### How to work with it 
+1. install the required libraries:  
+**Using conda**  
+    1. Install atleast version 24.1.4, miniconda or anaconda [here](https://www.anaconda.com/docs/getting-started/getting-started).
+    2. Install the libraries: 
+```bash
+    conda env create --file environment.yml
+```
+You can find the [environment.yml](/Dashboard//env/) here
 
+2. Run the streamlit page using
+```bash
+streamlit run app.py
+```   
+3. research away using the tools.  
+    *See the description of all the parts down below Dashboard*  
 ## Project structure  
+__Data__  
+The folder containing all the data:  
+- The raw data 
+- Different tables needed to translate the data 
+- Maintenance data.  
+
+__Notebooks__   
+The folder contains all the EDA's
+  
+__Dashboard__   
+The dashboard page.  
+The environment.yml
 
 ### Dashboard  
-The dashboard is one main page:   
-**insert picture**
-It's separated in 3 usable planes:  
-The first plane you need to choose your linac and the group type of file you want to see. It will show you the total amount of changes per file. You can unfold the bar to see these changes grouped per chosen file type. These groups are based on the systematic drawings of the linacs from Elekta. There is a checkbox to allow or not allow the usage of data that has part 45.  
+The dashboard is one page:   
+**insert picture**  
+It's separated in 4 usable planes:  
+
+It **starts** with an simple overview of the linacs, with items chosen by the kfm group.
+
+The **second** plane you need to choose your linac and the group type of file you want to see. It will show you the total amount of changes per file. You can unfold the bar to see these changes grouped per chosen file type. These groups are based on the systematic drawings of the linacs from Elekta. There is a checkbox to allow or not allow the usage of data that has part 45.  
   
-In the second plane The linac chosen in the first plan will be used aswell. You need to choose your filetype and you can choose multiple item names. The plot underneath will show the whole time series of the values with these item names. It will also show you outliers, these could be to heavily adjusted values. Based on a SMA.  
+In the **third** plane The linac chosen in the first plane will be used aswell. You need to choose your filetype and you can choose multiple item names. The plot underneath will show the whole time series of the values with these item names. It will also show you outliers, these could be to heavily adjusted values. Based on a SMA.  
 
-The last plane needs to be remade.....  
+The **last** plane contains a dataframe, this will show you an overview of all the values changed inbetween 2 dates you've chosen. The files needs to be changed at both of the moments to be shown. otherwise their will be no data shown.
+  
+### EDA's  
+There has been multiple EDA's written in the following order:  
+- *EDA_be*
+- *EDA_all_linacs_be*
+- *EDA_all_linacs_mlc*
+- *EDA_all_linacs_optics*
+- *EDA_onderhoud*  
+  
+In this order the files will be better looked at. In the first EDA it started with an overview what was skipped in the following EDA's. The switch between the first en second EDA, was caused by the terrible performance of the model. So a different approach was needed. And this was started in the second EDA. The same steps got copied to the following EDA's. 
 
-### EDA's
+

@@ -1,49 +1,99 @@
 groep	item	part
-dosismetry system pressure/temp	559	45
-dosismetry system pressure/temp	558	45
-dosismetry channel1	484	45
-dosismetry channel1	314	45
 dosismetry channel1	314	1
 dosismetry channel1	44	141
-dossismetry channel2	315	45
+dosismetry channel1	44	134
+dosismetry channel1	33	10
+dosismetry channel1	33	20
+dosismetry channel1	33	19
+dosismetry channel1	502	19
+dosismetry channel1	515	19
+dosismetry channel1	515	20
+dosismetry channel1	34	10
+dosismetry channel1	34	20
+dosismetry channel1	34	19
+dosismetry channel1	366	19
+dosismetry channel1	35	10
+dosismetry channel2	36	10
 dossismetry channel2	315	1
-dossismetry channel2	45	45
+mag fill psu control system	326	135
+mag fill psu control system	326	19
+mag fill psu control system	326	20
+mag fill psu control system	327	1
+mag fill psu control system	327	19
 mag fill psu control system	381	1
-mag fill psu control system	327	45
-mag fill psu control system	244	45
-magnetron tuning system	233	45
-magnetron tuning system / phase error detector	232	45
 phase error detector	230	1
-mag fill psu control system	216	45
-mag fill psu control system	212	45
-mag fill psu control system	191	45
-mag fill psu control system	190	45
+phase error detector	230	19
+phase error detector	230	20
 mag fill psu control system	187	1
+mag fill psu control system	244	19
 phase error detector	163	1
-phase error detector	163	45
-phase error detector	161	45
-phase error detector	129	45
 magnetron tuning system	97	1
+magnetron magnet system	214	19
+magnetron magnet system	214	20
+magnetron magnet system	328	19
+magnetron magnet system	328	20
+beam centering system	331	1
 beam centering system	332	1
 beam centering system	310	1
-beam centering system	195	45
-beam centering system	194	45
-beam centering system	193	45
-beam centering system	192	45
-beam centering system	165	45
 beam centering system	165	1
-beam centering system	164	45
+beam centering system	127	137
+beam centering system	127	142
+beam centering system	128	136
+beam centering system	128	137
+beam centering system	128	142
 beam centering system	164	1
-beam centering system	128	45
-beam centering system	127	45
+beam centering system	164	126
+beam centering system	164	142
+beam centering system	165	126
+hp phase shifter system	162	1
+hp phase shifter system	229	1
 beam focus system	308	1
+beam focus system	398	19
+beam focus system	398	20
+beam focus system	399	19
+beam focus system	399	20
 beam bending system	305	1
+beam bending system	305	19
+beam bending system	305	20
 beam bending system	304	1
-temprature monitoring system	226	45
-temprature monitoring system	224	45
-radiation head	85	45
-radiation head	80	45
-radiation head	75	45
-gantry rotation system	70	45
-gantry rotation system	44	45
-gantry rotation system	44	134
+beam bending system	304	19
+beam bending system	304	20
+beam bending system	306	19
+beam bending system	306	20
+beam bending system	307	19
+beam bending system	307	20
+beam bending system	384	19
+beam bending system	384	20
+PSS	130	10
+PSS	130	11
+PSS	130	12
+PSS	130	19
+magnetron tuning system	161	38
+magnetron tuning system	161	142
+wedge system	199	19
+wedge system	199	20
+wedge system	525	19
+wedge system	525	20
+target shift system	200	19
+target shift system	200	20
+target shift system	262	19
+target shift system	262	20
+secondary filter system	203	19
+secondary filter system	203	20
+collimator system	202	19
+collimator system	202	20
+scatter filter system	446	19
+scatter filter system	447	19
+scatter filter system	446	19
+scatter filter system	447	20
+
+
+
+
+
+
+
+
+
+
+
