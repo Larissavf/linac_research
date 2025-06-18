@@ -76,6 +76,32 @@ def select_data_from_df(filter_on, df, col_n):
     return df[df[col_n].str.contains(fr'{str(filter_on)}', regex=True)]
 
 """
+The db df common preperation for the status bar
+
+input:
+    df, dataframe: whole db df
+    linac, string: linac code
+return:
+    this_df, datafram: whole db df edited
+    dates, list: all the dates of that file
+    df_changes, dataframe: contains per date all the changes between item and part
+"""
+def prep_db_to_status_bar(df, linac):
+    # filter the df so that its just 1 file
+    this_df = df[df["linac"] == linac].copy()
+    this_df = this_df[this_df["part"] != 45]
+    this_df = this_df[this_df["file_name"] == "Low X-ray energy - 6 MV"]
+
+    #all dates
+    dates = sorted(this_df["date"].unique().tolist())
+    #determine last changed date
+    changes_per_file = make_changes_per_file(this_df)
+    #choose this certain file
+    df_changes = changes_per_file["Low X-ray energy - 6 MV"]
+
+    return this_df, dates, df_changes
+
+"""
 Create the linac status bar
 
 input:
@@ -86,17 +112,9 @@ return:
 """
 @st.cache_data
 def create_linac_status(df, linac):
-    # filter the df so that its just 1 file
-    this_df = df[df["linac"] == linac].copy()
-    this_df = this_df[this_df["part"] != 45]
-    this_df = this_df[this_df["file_name"] == "Low X-ray energy - 6 MV"]
+    #do the df prep
+    this_df, dates, df_changes = prep_db_to_status_bar(df, linac)
 
-    #all dates
-    dates = sorted(this_df["date"].unique().tolist())
-
-    #determine last changed date
-    changes_per_file = make_changes_per_file(this_df)
-    df_changes = changes_per_file["Low X-ray energy - 6 MV"]
     #items of interest
     df_changes= df_changes[df_changes["item"].isin([381])]
     # make a list of the last changed date for all items
@@ -104,7 +122,7 @@ def create_linac_status(df, linac):
     lambda row: row[(row != 0)].last_valid_index(), axis=1
     ).tolist()
 
-    #addition of colour coding
+    #addition of colour coding red if longer than 30 days
     last_changed = []
     for date in last_changed_dates:
         days = (pd.Timestamp.now().normalize() - pd.to_datetime(date)).days
@@ -112,7 +130,6 @@ def create_linac_status(df, linac):
             last_changed.append("🔴" + date)
         else:
             last_changed.append("🟢" + str(date))
-
     # to show
     output = pd.DataFrame({
             "Gun aim I": this_df[this_df["item"] == 381]["value"].values[0]
@@ -120,6 +137,25 @@ def create_linac_status(df, linac):
     ).T
     output["Last changed"] = last_changed
     return output
+
+"""
+Make a list of all the changed part en items in the most recent change
+
+input:
+    df, dataframe: whole db df
+    linac, string: linac code
+return:
+    output, list: the part and items to be shown 
+"""
+@st.cache_data
+def make_last_changed_values(df, linac):
+    #do the df prep
+    this_df, dates, df_changes = prep_db_to_status_bar(df, linac)
+
+    #all the last changed items
+    recent_changed = df_changes[[dates[-1], "category"]]
+    items_parts = recent_changed[recent_changed[dates[-1]] != 0]["category"].unique().tolist()
+    return items_parts
 
 """
 make the total amount of changes figure
@@ -254,7 +290,7 @@ def grouped_plot(changes_per_file, groups, file_name):
         #get the changed items
         df_for_items = df_changes[df_changes[date_columns] != 0]
 
-
+        
         try:
             for_items = df_for_items[date_columns].copy()
             # replace the amount with the category
@@ -469,7 +505,6 @@ return:
 ### complex??
 @st.cache_data 
 def make_diff_plot_comparedf(changes_per_file, ips, newdf):
-
     #make the df to show
     total_df = pd.DataFrame()
     for filename, df_changes in changes_per_file.items():
@@ -495,10 +530,8 @@ def make_diff_plot_comparedf(changes_per_file, ips, newdf):
                         "Part": [ip_df["part"].values[0]] * len(dates),
                         "Unit": [str(ip_df["Resolution"].values[0])] * len(dates) 
                     }
-
                 temp_df = pd.DataFrame(data) 
                 total_df = pd.concat([total_df, temp_df])
-
     #determine ouliers using SMA
     df_outlier_scanned = (
         total_df
@@ -653,17 +686,20 @@ return:
 """
 def translate_category(df): 
     linac_items = st.session_state.linac_items
-    #translate the category
-    new_df = df.merge(linac_items[["Category", "Item name"]], left_on="item", right_on="Item name", how="left").drop(columns=["Item name", "category"])
-    #add item number
-    new_df["category"] = new_df["Category"] + " (" + new_df["item"].astype("str") + "," + new_df["item"].astype("str") + ")"
+    tempdf = df[df["file_name"].str.contains("Mlc|Optics")]
+    tempdf["category"]= tempdf["category"] + " (" + tempdf["item"].astype("str") + "," + tempdf["part"].astype("str") + ")"
 
-    return new_df.drop(columns="Category")
+    otherdf = df[~df["file_name"].str.contains("Mlc|Optics", na=False)]
+    #translate the category
+    otherdf = otherdf.merge(linac_items[["Category", "Item name"]], left_on="item", right_on="Item name", how="left").drop(columns=["Item name", "category"])
+    #add item number
+    otherdf["category"] = otherdf["Category"] + " (" + otherdf["item"].astype("str") + "," + otherdf["part"].astype("str") + ")"
+    otherdf = otherdf.drop(columns="Category")
+    return pd.concat([otherdf, tempdf])
 
 """
 editing of the database data
 """
-@st.cache_data 
 def edit_db_data(df):
     # to translate energy filename
     # 2 and 5 changed
@@ -696,6 +732,7 @@ def edit_db_data(df):
     df = translate_linacs(df)
 
     df = translate_category(df)
+    print(df)
 
     return df
 
@@ -730,14 +767,22 @@ l5 = linac_status_2.container()
 
 l1.write("*Linac 1*")
 l1.write(create_linac_status(df_db, "linac1"))
+l1.write("**Last changed values:**\n" + "\n".join(f"- {line}" for line in make_last_changed_values(df_db, "linac1")))
 l2.write("*Linac 2*")
 l2.write(create_linac_status(df_db, "linac2"))
+l2.write("**Last changed values:**\n" + "\n".join(f"- {line}" for line in make_last_changed_values(df_db, "linac2")))
 l3.write("*Linac 3*")
 l3.write(create_linac_status(df_db, "linac3"))
+l3.write("**Last changed values:**\n" + "\n".join(f"- {line}" for line in make_last_changed_values(df_db, "linac3")))
 l4.write("*Linac 4*")
 l4.write(create_linac_status(df_db, "linac4"))
+l4.write("**Last changed values:**\n" + "\n".join(f"- {line}" for line in make_last_changed_values(df_db, "linac4")))
 l5.write("*Linac 5*")
 l5.write(create_linac_status(df_db, "linac5"))
+try:
+    l5.write("**Last changed values:**\n" + "\n".join(f"- {line}" for line in make_last_changed_values(df_db, "linac5")))
+except:
+    l5.write("Misses a item")
 
 #the first total amount plot
 amount_plot = st.container(border= True)
@@ -752,8 +797,15 @@ grouped_amount_plot = amount_plot.expander(label="See the changes per group")
 grouped_amount_plot.write("The groups are based on the system drawings, see [here](https://isala.sharepoint.com/sites/AFDRadiotherapie/RT%20afdelingsschijf/Forms/AllItems.aspx?id=%2Fsites%2FAFDRadiotherapie%2FRT%20afdelingsschijf%2FKlinische%20Fysica%2FOpenbaar%2FProducthandleidingen%2FElekta%20Versneller%2FEVO%2FLinac%20%2D%20System%20Diagrams%20%28from%20Linac%20152972%29%20%2D%201543441%5F04%2Epdf&parent=%2Fsites%2FAFDRadiotherapie%2FRT%20afdelingsschijf%2FKlinische%20Fysica%2FOpenbaar%2FProducthandleidingen%2FElekta%20Versneller%2FEVO).")
 grouped_amount_plot.plotly_chart(grouped_plot(st.session_state.changes_per_file, grouped_partly, st.session_state.type_file_grouped_fig))
 
-# set up de elements for the second: difference plot
+# set up the elements for the second: difference plot
 diff_plot = st.container(border=True)
+
+# set up the elements for the third: compare linacs df
+compare_linacs = st.container(border=True)
+cl1, cl2, cl3 = compare_linacs.columns(3)
+cl1.checkbox("See the Part & items that had no changes", key="none_changes_compare_linacs")
+
+# set up the working elements of the second
 btn1, btn2 = diff_plot.columns(2)
 btn1.selectbox(label='File type', options=st.session_state.types_file_total_amount, key="file_type_diff_plot")
 btn2options = list(df_db[df_db["file_name"] == st.session_state.file_type_diff_plot]["category"].unique())
@@ -774,10 +826,7 @@ try:
 except Exception as e:
     diff_plot.write("Choose a Part & item you want to see")
 
-#set up de elemtens of the compare linacs df
-compare_linacs = st.container(border=True)
-cl1, cl2, cl3 = compare_linacs.columns(3)
-cl1.checkbox("See the Part & items that had no changes", key="none_changes_compare_linacs")
+#set up de working elemtens of the third
 multiple1, multiple2  = compare_linacs.columns(2)
 compare_dfs = compare_linacs.expander(label= "see the dataframes with the selected data")
 df1, df2  = compare_dfs.columns(2)
