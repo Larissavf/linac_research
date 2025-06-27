@@ -271,7 +271,7 @@ i162 - HP phase shifter control item,HP ph.ctrl,The high power phase shifter ser
 i163 - LP phase shifter control item,LP ph.ctrl,The low power phase shifter servo control item.,Analogue,0 to 4095,12 bits,None,"AFC, Beam Control, Plotter",HT and RF [Ref: 7],Ref 14: Not available
 i164 - Flatness 2R servo block,2R I ctrl,The 2R servo control item controls the current required to make the beam symmetrical.,Analogue,-600 mA to +600 mA,1 mA,mA,"Beam Control, LV PSU, Plotter, Steering",Power Supplies and Interlocks [Ref: 5],Ref 14: 4513 330 7025 - sheet 1
 ,,,,,,,,Beam Physics [Ref: 8],
-i165 - Flatness 2T servo block,2T I ctrl,The 2T servo control item controls the current required to make the beam symmetrical.,Analogue,-600 mA to +600 mA,12 bits,mA,"Beam Control, LV PSU, Plotter, Steering ",Beam Physics [Ref: 8],Ref 14: 4513 330 7025 - sheet 2
+i165 - Flatness 2T servo block,2T I ctrl,The 2T servo control item controls the current required to make the beam symmetrical.,Analogue,-600 mA to +600 mA,1 mA,mA,"Beam Control, LV PSU, Plotter, Steering ",Beam Physics [Ref: 8],Ref 14: 4513 330 7025 - sheet 2
 i166 - Hump error monitor,Hump Err,The value of this item is the hump error.,Real,150 to +150,12 bits,Nominal %,"Beam Monitor, Gun Servo, Steering",Power Supplies and Interlocks [Ref: 5],Not available
 ,,,,,,,,Beam Physics [Ref: 8],
 i167 - Dose rate error item,D/rate Err,"The value of this item is the dose rate error between the set dose rate and the actual dose rate (for software electron gun servo, no longer).",Analogue,0 MU/min to 600 MU/min,1 MU/min,MU/min,"Dose Calibration, Reason Items",Dosimetry [Ref: 9],Ref 14: 4513 330 7048 - sheet 1
@@ -516,7 +516,7 @@ i312 - Set gain slits balance,Slit Bal,Sets the balance gain for the slitted fli
 ,,This item is not used when the digital accelerator is fitted with a slitless flight tube and a hardware gun servo,,Unity gain = 20.48 (nominal value),,,,,
 i313 - Set gain slits loop,Slit Loop,Sets the loop gain for the slitted flight tube.,Analog word,0 to +40.95,12 bits,Integer,Only appears on the Gun Servo service page for digital accelerators fitted with a slitted flight tube,Beam Physics [Ref: 8],Not available
 ,,This item is not used when the digital accelerator is fitted with a slitless flight tube and a hardware gun servo,,,,,,,
-i314 - Set dosimetry channel 1 reference,,,,,,,,,
+i314 - Set dosimetry channel 1 reference,Dose ref 1,This item sets the calibration of dosimetry channel 1. Increase the value of this item to increase the dose rate reading. (See i314 for more details.),Analog word ,0 to +40.95,0.01,Integer,Dose Calibration,Dosimetry [Ref: 9],Ref 14: 4513 330 7048 - sheet 2
 i315 - Set dosimetry channel 2 reference,Dose ref 2,This item sets the calibration of dosimetry channel 2. Increase the value of this item to increase the dose rate reading. (See i314 for more details.),Analog word ,0 to +40.95,0.01,Integer,Dose Calibration,Dosimetry [Ref: 9],Ref 14: 4513 330 7048 - sheet 2
 i316 - Set offset for dose channel 1,Dummy dos1,The dummy dose 1 setting for the DOS-A PCB.,Analog word,0 to +255,8 bits,Integer,Edit Machine Item Part,Dosimetry [Ref: 9],Ref 14: 4513 330 7048 - sheet 1
 i317 - Set offset for dose channel 2,Dummy dos2,The dummy dose 1 setting for the DOS-B PCB,Analog word,0 to +255,8 bits,Integer,Edit Machine Item Part,Dosimetry [Ref: 9],Ref 14: 4513 330 7048 - sheet 2
